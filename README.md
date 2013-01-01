@@ -16,14 +16,12 @@ Combining these features with the media playing facilities of iOS devices makes 
 The SDK contains a SamplePlayer application that demonstrates how to build an iOS application that uses most of these features to create a content stream on the fly as well as enable the user to trigger an insert dynamically by pushing a button. 
 
 ## Getting Started
-* * *
 To get the source code of our SDKs and samples via git just type:
 
-`git clone https://github.com/WindowsAzure/azure-media-player-framework
-cd ./azure-media-player-framework/`
+`git clone https://github.com/WindowsAzure/azure-media-player-framework`
+`cd ./azure-media-player-framework/`
 
 ## Sample Application
-* * *
 We provide a sample application, located at `azure-media-player-framework/src/iOS/HLSClient/`. It demostrates how you could use this framework to schedule different types of advertisements. All the content and advertisements URLs are from Windows Azure Media Services. It is highly advised to start with this sample application so you could get a general idea on how this SDK works. 
 
 
