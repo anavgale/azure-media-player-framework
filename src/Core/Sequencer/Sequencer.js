@@ -64,7 +64,7 @@ PLAYER_SEQUENCER.playbackSegmentPool = (function () {
         createPlaybackSegment: function (aClip, aStartTime, aPlaybackRate) {
             ///<summary>Create a new playbackSegment object</summary>
             ///<param name="aClip" type="Object">A reference to a Scheduler sequentialPlaylist object</param>
-            ///<param name="aStartTime" type="Number">manifest time of where to start playing in the new segment</param>
+            ///<param name="aStartTime" type="Number">media time of where to start playing in the new segment</param>
             ///<param name="aPlaybackRate" type="Number">initial playback rate</param>
             ///<returns type="Object">playbackSegment object that was created</returns>
             var myId = nextSegmentId,
@@ -81,7 +81,7 @@ PLAYER_SEQUENCER.playbackSegmentPool = (function () {
                 /// <field name="clip" type="Object" mayBeNull="true">reference to a Scheduler sequentialPlaylist object</field>
                 get clip() { return myClip; },
                 set clip(value) { myClip = value; mySplitCount = value.splitCount; },
-                /// <field name="initialPlaybackStartTime" type="Number">manifest time of where to start playing in the new segment</field>
+                /// <field name="initialPlaybackStartTime" type="Number">media time of where to start playing in the new segment</field>
                 get initialPlaybackStartTime() { return myStartTime; },
                 set initialPlaybackStartTime(value) { throwSetterInhibited(value); },
                 /// <field name="initialPlaybackRate" type="Number">initial playback rate</field>
@@ -181,18 +181,18 @@ PLAYER_SEQUENCER.createSequencerPluginChain = function ( sequentialPlaylistAcces
                     return sequentialPlaylistAccess;
                 },
 
-                manifestToSeekbarTime: function ( params ) {
-                    ///<summary>Convert manifest time to seekbar time. Should be called several times per second to keep seekbar updated and catch playlist changes.</summary>
+                mediaToSeekbarTime: function ( params ) {
+                    ///<summary>Convert media time to seekbar time. Should be called several times per second to keep seekbar updated and catch playlist changes.</summary>
                     ///<param name="params" type="Object">An object with properties: currentSegmentId, playbackRate, currentPlaybackPosition</param>
                     ///<returns type="Object">An object with properties: currentSeekbarPosition, minSeekbarPosition, maxSeekbarPosition, playbackPolicy, playbackRangeExceeded</returns>
-                    return nextSequencer.manifestToSeekbarTime(params);
+                    return nextSequencer.mediaToSeekbarTime(params);
                 },
         
-                manifestToLinearTime: function ( params ) {
-                    ///<summary>Convert manifest time to linear time. Used to determine where to resume from last played position.</summary>
-                    ///<param name="params" type="Object">An object with properties: currentSegmentId, currentPlaybackPosition (in manifest time)</param>
+                mediaToLinearTime: function ( params ) {
+                    ///<summary>Convert media time to linear time. Used to determine where to resume from last played position.</summary>
+                    ///<param name="params" type="Object">An object with properties: currentSegmentId, currentPlaybackPosition (in media time)</param>
                     ///<returns type="Object">An object with properties: linearPosition, isOnLinearTimeline</returns>
-                    return nextSequencer.manifestToLinearTime( params );
+                    return nextSequencer.mediaToLinearTime( params );
                 },
         
                 seekFromLinearPosition: function ( params ) {
@@ -211,21 +211,21 @@ PLAYER_SEQUENCER.createSequencerPluginChain = function ( sequentialPlaylistAcces
         
                 onEndOfMedia: function ( params ) {
                     ///<summary>Notify end of playing the current playback segment to get a new playback segment object for the next segment in the sequence. The Scheduler is notified the playlist entry for the current playback segment has been played.</summary>
-                    ///<param name="params" type="Object">An object with properties: currentSegmentId, currentPlaybackPosition (in manifest time), currentPlaybackRate, isNotPlayed, isEndOfSequence</param>
+                    ///<param name="params" type="Object">An object with properties: currentSegmentId, currentPlaybackPosition (in media time), currentPlaybackRate, isNotPlayed, isEndOfSequence</param>
                     ///<returns type="Object" mayBeNull="true">The new playback segment object reference (null when at end of list)</returns>
                     return nextSequencer.onEndOfMedia( params );
                 },
         
                 onEndOfBuffering: function ( params ) {
                     ///<summary>Notify end of buffering the playback segment to get a new playback segment object for the next segment in the sequence to buffer. The Scheduler is NOT notified the playlist entry for the current playback segment has been played.</summary>
-                    ///<param name="params" type="Object">An object with properties: currentSegmentId, currentPlaybackPosition (in manifest time), currentPlaybackRate</param>
+                    ///<param name="params" type="Object">An object with properties: currentSegmentId, currentPlaybackPosition (in media time), currentPlaybackRate</param>
                     ///<returns type="Object" mayBeNull="true">The new playback segment object reference (null when at end of list)</returns>
                     return nextSequencer.onEndOfBuffering( params );
                 },
         
                 onError: function ( params ) {
                     ///<summary>Notify playback error to get a new playback segment object for the next segment in the sequence to use after an error.</summary>
-                    ///<param name="params" type="Object">An object with properties: currentSegmentId, currentPlaybackPosition (in manifest time), currentPlaybackRate, isNotPlayed, isEndOfSequence, errorDescription</param>
+                    ///<param name="params" type="Object">An object with properties: currentSegmentId, currentPlaybackPosition (in media time), currentPlaybackRate, isNotPlayed, isEndOfSequence, errorDescription</param>
                     ///<returns type="Object" mayBeNull="true">The new playback segment object reference (null when sequence is terminated)</returns>
                     return nextSequencer.onError( params );
                 },
@@ -306,7 +306,7 @@ PLAYER_SEQUENCER.createDefaultSequencerPlugin = function (basePlugin) {
     myOnEnd = function ( params, isEndOfMedia ) {
         /* params:
         currentSegmentId            // number: the unique Id for the playback segment
-        currentPlaybackPosition     // number: the current playback position in manifest time
+        currentPlaybackPosition     // number: the current playback position in media time
         currentPlaybackRate         // number: the current playback rate
         isNotPlayed                 // boolean: suppress any "is played" processing
         isEndOfSequence             // boolean: do not create a new playbackSegment
@@ -323,7 +323,7 @@ PLAYER_SEQUENCER.createDefaultSequencerPlugin = function (basePlugin) {
         }
         // nextEntry is defined to be falsey when getEntryAfter/BeforeId runs off the end of the playlist
         if (nextEntry) {
-            initialPlaybackStartTime = isPlayForward ? nextEntry.minRenderingTime : nextEntry.maxRenderingTime;
+            initialPlaybackStartTime = isPlayForward ? nextEntry.clipBeginMediaTime : nextEntry.clipEndMediaTime;
             newSegment = myPlaybackSegmentPool.createPlaybackSegment(nextEntry, initialPlaybackStartTime, params.currentPlaybackRate);
         }
 
@@ -353,19 +353,19 @@ PLAYER_SEQUENCER.createDefaultSequencerPlugin = function (basePlugin) {
     // NOTE: Any that are missed (or mis-spelled) will cause an exception when
     //       the default pass-through uses its null 'nextSequencer' value.
     
-    basePlugin.manifestToSeekbarTime = function ( params ) {
+    basePlugin.mediaToSeekbarTime = function ( params ) {
         /* params:
         currentSegmentId,           // number: the unique Id for the playback segment
         playbackRate,               // number: the current playback rate
-        currentPlaybackPosition,    // number: the current position in manifest time
+        currentPlaybackPosition,    // number: the current position in media time
         */
         var currentSegment = myPlaybackSegmentPool.getPlaybackSegment(params.currentSegmentId),
             entry = currentSegment.clip,
             playbackRate = params.playbackRate,
             currentPlaybackPosition = params.currentPlaybackPosition,
-            minManifestPosition = entry.minRenderingTime,
-            maxManifestPosition = entry.maxRenderingTime,
-            currentSeekbarPosition = currentPlaybackPosition - minManifestPosition,
+            clipBeginMediaTime = entry.clipBeginMediaTime,
+            clipEndMediaTime = entry.clipEndMediaTime,
+            currentSeekbarPosition = currentPlaybackPosition - clipBeginMediaTime,
             minSeekbarPosition = 0,
             maxSeekbarPosition = 0,
             playbackPolicy = null,
@@ -374,7 +374,7 @@ PLAYER_SEQUENCER.createDefaultSequencerPlugin = function (basePlugin) {
 
         if (currentSegment.clip.isAdvertisement) {
             playbackPolicy = entry.playbackPolicyObj;
-            maxSeekbarPosition = maxManifestPosition - minManifestPosition;
+            maxSeekbarPosition = clipEndMediaTime - clipBeginMediaTime;
 
             // currentSegment.isClipChanged cannot happen for an ad
             
@@ -395,7 +395,7 @@ PLAYER_SEQUENCER.createDefaultSequencerPlugin = function (basePlugin) {
                 updatedEntry = mySequentialPlaylist.getEntryAtTime(currentSeekbarPosition);
                 if (!updatedEntry) {
                     throw new PLAYER_SEQUENCER.SequencerError(
-                        'manifestToSeekbarTime failed to find anealed playlist entry at time ' + currentSeekbarPosition.toString());
+                        'mediaToSeekbarTime failed to find anealed playlist entry at time ' + currentSeekbarPosition.toString());
                 }
                 if (currentSegment.clip.idSplitFrom === updatedEntry.idSplitFrom) {
                     // Replace currentSegment clip with the new welded/split playlist entry.
@@ -409,8 +409,8 @@ PLAYER_SEQUENCER.createDefaultSequencerPlugin = function (basePlugin) {
         }
 
         if (!updatedEntry && 
-            ((playbackRate < 0 && currentPlaybackPosition < minManifestPosition) ||
-            (playbackRate >= 0 && maxManifestPosition < currentPlaybackPosition))) {
+            ((playbackRate < 0 && currentPlaybackPosition < clipBeginMediaTime) ||
+            (playbackRate >= 0 && clipEndMediaTime < currentPlaybackPosition))) {
             playbackRangeExceeded = true;
         }
 
@@ -423,17 +423,17 @@ PLAYER_SEQUENCER.createDefaultSequencerPlugin = function (basePlugin) {
         };
     };
 
-    basePlugin.manifestToLinearTime = function ( params ) {
+    basePlugin.mediaToLinearTime = function ( params ) {
         /* params:
         currentSegmentId,           // number: the unique Id for the playback segment
-        currentPlaybackPosition     // number: the current playback position in manifest time
+        currentPlaybackPosition     // number: the current playback position in media time
         */
         var currentSegment = myPlaybackSegmentPool.getPlaybackSegment(params.currentSegmentId),
-            positionOffset = params.currentPlaybackPosition - currentSegment.clip.minRenderingTime,
+            positionOffset = params.currentPlaybackPosition - currentSegment.clip.clipBeginMediaTime,
             result = currentSegment.clip.linearStartTime;
 
         if (currentSegment.clip.linearDuration > 0 && positionOffset > 0) {
-            // NOTE: result is *not* clipped to maxRenderingTime
+            // NOTE: result is *not* clipped to clipEndMediaTime
             result += positionOffset;
         }
         return result;
@@ -464,7 +464,7 @@ PLAYER_SEQUENCER.createDefaultSequencerPlugin = function (basePlugin) {
             myPlaybackSegmentPool.releasePlaybackSegment(currentSegment.segmentId);
             initialPlaybackRate = currentSegment.initialPlaybackRate;
         }
-        initialPlaybackStartTime = seekPlaylistEntry.minRenderingTime + (params.linearSeekPosition - seekPlaylistEntry.linearStartTime);
+        initialPlaybackStartTime = seekPlaylistEntry.clipBeginMediaTime + (params.linearSeekPosition - seekPlaylistEntry.linearStartTime);
         currentSegment = myPlaybackSegmentPool.createPlaybackSegment(seekPlaylistEntry, initialPlaybackStartTime, initialPlaybackRate);
 
         return currentSegment;
@@ -493,13 +493,13 @@ PLAYER_SEQUENCER.createDefaultSequencerPlugin = function (basePlugin) {
                 throw new PLAYER_SEQUENCER.SequencerError('seekFromSeekbarPosition outside playlist range');
             }
             initialPlaybackRate = currentSegment.initialPlaybackRate;
-            initialPlaybackStartTime = seekPlaylistEntry.minRenderingTime;
+            initialPlaybackStartTime = seekPlaylistEntry.clipBeginMediaTime;
             // if new clip is not zero duration, offset initialPlaybackStartTime by the remaining seek distance
             if (seekPlaylistEntry.linearDuration > 0) {
                 initialPlaybackStartTime += (params.seekbarSeekPosition - seekPlaylistEntry.linearStartTime);
             }
         }
-        else if (params.seekbarSeekPosition > currentSegment.clip.maxRenderingTime - currentSegment.clip.minRenderingTime) {
+        else if (params.seekbarSeekPosition > currentSegment.clip.clipEndMediaTime - currentSegment.clip.clipBeginMediaTime) {
             // for zero-duration clips seeking must be within the clip
             throw new PLAYER_SEQUENCER.SequencerError('seekFromSeekbarPosition outside segment range');
         }
@@ -507,7 +507,7 @@ PLAYER_SEQUENCER.createDefaultSequencerPlugin = function (basePlugin) {
             // use the same zero-duration clip to create the new segment
             seekPlaylistEntry = currentSegment.clip;
             initialPlaybackRate = currentSegment.initialPlaybackRate;
-            initialPlaybackStartTime = seekPlaylistEntry.minRenderingTime + params.seekbarSeekPosition;
+            initialPlaybackStartTime = seekPlaylistEntry.clipBeginMediaTime + params.seekbarSeekPosition;
         }
         seekPlaybackSegment = myPlaybackSegmentPool.createPlaybackSegment(seekPlaylistEntry, initialPlaybackStartTime, initialPlaybackRate);
 

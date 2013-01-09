@@ -13,15 +13,15 @@
 // FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 //
 
-#import "ManifestTime.h"
+#import "MediaTime.h"
 
-@implementation ManifestTime
+@implementation MediaTime
 
 #pragma mark -
 #pragma mark Properties:
 
 @synthesize currentPlaybackPosition;
-@synthesize minManifestPosition;
-@synthesize maxManifestPosition;
+@synthesize clipBeginMediaTime;
+@synthesize clipEndMediaTime;
 
 @end

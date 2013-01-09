@@ -30,17 +30,17 @@ typedef enum
 {
 @private
     NSURL* clipURL;
-    ManifestTime *renderTime;
+    MediaTime *mediaTime;
     PlaybackPolicy* policy;
-    BOOL deleteAfterPlay;
+    BOOL deleteAfterPlayed;
     AdType type;
     int32_t appendTo;
 }
 
 @property(nonatomic, retain) NSURL* clipURL;
-@property(nonatomic, retain) ManifestTime* renderTime;
+@property(nonatomic, retain) MediaTime* mediaTime;
 @property(nonatomic, retain) PlaybackPolicy* policy;
-@property(nonatomic, assign) BOOL deleteAfterPlay;
+@property(nonatomic, assign) BOOL deleteAfterPlayed;
 @property(nonatomic, assign) AdType type;
 @property(nonatomic, assign) int32_t appendTo;
 

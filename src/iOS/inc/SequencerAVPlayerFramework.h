@@ -22,7 +22,7 @@
 @class Scheduler;
 @class PlaybackSegment;
 @class SeekbarTime;
-@class ManifestTime;
+@class MediaTime;
 @class LinearTime;
 @class AdInfo;
 
@@ -81,7 +81,7 @@
 - (BOOL) skipCurrentPlaylistEntry;
 
 - (BOOL) scheduleClip:(AdInfo *)ad atTime:(LinearTime *)linearTime forType:(PlaylistEntryType)type andGetClipId:(int32_t *)clipId;
-- (BOOL) appendContentClip:(NSURL *)clipURL withManifestTime:(ManifestTime *)manifestTime andGetClipId:(int32_t *)clipId;
+- (BOOL) appendContentClip:(NSURL *)clipURL withMediaTime:(MediaTime *)mediaTime andGetClipId:(int32_t *)clipId;
 - (BOOL) cancelClip:(int32_t)clipContext;
 
 @end

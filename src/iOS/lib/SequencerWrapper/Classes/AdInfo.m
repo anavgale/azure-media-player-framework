@@ -21,9 +21,9 @@
 #pragma mark Properties:
 
 @synthesize clipURL;
-@synthesize renderTime;
+@synthesize mediaTime;
 @synthesize policy;
-@synthesize deleteAfterPlay;
+@synthesize deleteAfterPlayed;
 @synthesize type;
 @synthesize appendTo;
 
@@ -35,7 +35,7 @@
     NSLog(@"AdInfo dealloc called.");
     
     [clipURL release];
-    [renderTime release];
+    [mediaTime release];
     [policy release];
     
     [super dealloc];

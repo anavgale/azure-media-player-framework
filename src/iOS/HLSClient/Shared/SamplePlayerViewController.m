@@ -16,7 +16,7 @@
 #import "SamplePlayerViewController.h"
 #import "SamplePlayerAppDelegate.h"
 #import <SequencerAVPlayerFramework.h>
-#import <ManifestTime.h>
+#import <MediaTime.h>
 #import <SeekbarTime.h>
 #import <Scheduler.h>
 
@@ -111,22 +111,22 @@
     if (!hasStarted)
     {
         // Schedule the main content
-        ManifestTime *manifestTime = [[[ManifestTime alloc] init] autorelease];
-        manifestTime.currentPlaybackPosition = 0;
-        manifestTime.minManifestPosition = 0;
-        manifestTime.maxManifestPosition = 90;
+        MediaTime *mediaTime = [[[MediaTime alloc] init] autorelease];
+        mediaTime.currentPlaybackPosition = 0;
+        mediaTime.clipBeginMediaTime = 0;
+        mediaTime.clipEndMediaTime = 90;
         
         int clipId = 0;
-        if (![framework appendContentClip:[NSURL URLWithString:url] withManifestTime:manifestTime andGetClipId:&clipId])
+        if (![framework appendContentClip:[NSURL URLWithString:url] withMediaTime:mediaTime andGetClipId:&clipId])
         {
             [self logFrameworkError];
         }
         
         NSString *secondContent=@"http://wamsblureg001orig-hs.cloudapp.net/6651424c-a9d1-419b-895c-6993f0f48a26/The%20making%20of%20Microsoft%20Surface-m3u8-aapl.ism/Manifest(format=m3u8-aapl)";
-        manifestTime.currentPlaybackPosition = 0;
-        manifestTime.minManifestPosition = 0;
-        manifestTime.maxManifestPosition = 80;
-        if (![framework appendContentClip:[NSURL URLWithString:secondContent] withManifestTime:manifestTime andGetClipId:&clipId])
+        mediaTime.currentPlaybackPosition = 0;
+        mediaTime.clipBeginMediaTime = 0;
+        mediaTime.clipEndMediaTime = 80;
+        if (![framework appendContentClip:[NSURL URLWithString:secondContent] withMediaTime:mediaTime andGetClipId:&clipId])
         {
             [self logFrameworkError];
         }
@@ -140,9 +140,9 @@
         NSString *adpodSt1=@"https://portalvhdsq3m25bf47d15c.blob.core.windows.net/asset-e47b43fd-05dc-4587-ac87-5916439ad07f/Windows%208_%20Cliffjumpers.mp4?st=2012-11-28T16%3A31%3A57Z&se=2014-11-28T16%3A31%3A57Z&sr=c&si=2a6dbb1e-f906-4187-a3d3-7e517192cbd0&sig=qrXYZBekqlbbYKqwovxzaVZNLv9cgyINgMazSCbdrfU%3D";
         AdInfo *adpodInfo1 = [[[AdInfo alloc] init] autorelease];
         adpodInfo1.clipURL = [NSURL URLWithString:adpodSt1];
-        adpodInfo1.renderTime = [[[ManifestTime alloc] init] autorelease];
-        adpodInfo1.renderTime.minManifestPosition = 0;
-        adpodInfo1.renderTime.maxManifestPosition = 17;
+        adpodInfo1.mediaTime = [[[MediaTime alloc] init] autorelease];
+        adpodInfo1.mediaTime.clipBeginMediaTime = 0;
+        adpodInfo1.mediaTime.clipEndMediaTime = 17;
         adpodInfo1.policy = [[[PlaybackPolicy alloc] init] autorelease];
         adpodInfo1.type = AdType_Midroll;
         adpodInfo1.appendTo=-1;
@@ -155,9 +155,9 @@
         NSString *adpodSt2=@"https://portalvhdsq3m25bf47d15c.blob.core.windows.net/asset-532531b8-fca4-4c15-86f6-45f9f45ec980/Windows%208_%20Sign%20in%20with%20a%20Smile.mp4?st=2012-11-28T16%3A35%3A26Z&se=2014-11-28T16%3A35%3A26Z&sr=c&si=c6ede35c-f212-4ccd-84da-805c4ebf64be&sig=zcWsj1JOHJB6TsiQL5ZbRmCSsEIsOJOcPDRvFVI0zwA%3D";
         AdInfo *adpodInfo2 = [[[AdInfo alloc] init] autorelease];
         adpodInfo2.clipURL = [NSURL URLWithString:adpodSt2];
-        adpodInfo2.renderTime = [[[ManifestTime alloc] init] autorelease];
-        adpodInfo2.renderTime.minManifestPosition = 0;
-        adpodInfo2.renderTime.maxManifestPosition = 17;
+        adpodInfo2.mediaTime = [[[MediaTime alloc] init] autorelease];
+        adpodInfo2.mediaTime.clipBeginMediaTime = 0;
+        adpodInfo2.mediaTime.clipEndMediaTime = 17;
         adpodInfo2.policy = [[[PlaybackPolicy alloc] init] autorelease];
         adpodInfo2.type = AdType_Pod;
         adpodInfo2.appendTo = adIndex;
@@ -169,14 +169,14 @@
         NSString *oneTimeAd=@"http://wamsblureg001orig-hs.cloudapp.net/5389c0c5-340f-48d7-90bc-0aab664e5f02/Windows%208_%20You%20and%20Me%20Together-m3u8-aapl.ism/Manifest(format=m3u8-aapl)";
         AdInfo *oneTimeInfo = [[[AdInfo alloc] init] autorelease];
         oneTimeInfo.clipURL = [NSURL URLWithString:oneTimeAd];
-        oneTimeInfo.renderTime = [[[ManifestTime alloc] init] autorelease];
-        oneTimeInfo.renderTime.minManifestPosition = 0;
-        oneTimeInfo.renderTime.maxManifestPosition = 25;
+        oneTimeInfo.mediaTime = [[[MediaTime alloc] init] autorelease];
+        oneTimeInfo.mediaTime.clipBeginMediaTime = 0;
+        oneTimeInfo.mediaTime.clipEndMediaTime = 25;
         oneTimeInfo.policy = [[[PlaybackPolicy alloc] init] autorelease];
         adLinearTime.startTime = 43;
         adLinearTime.duration = 0;
         oneTimeInfo.type = AdType_Midroll;
-        oneTimeInfo.deleteAfterPlay = YES;
+        oneTimeInfo.deleteAfterPlayed = YES;
         if (![framework scheduleClip:oneTimeInfo atTime:adLinearTime forType:PlaylistEntryType_Media andGetClipId:&adIndex])
         {
             [self logFrameworkError];
@@ -185,14 +185,14 @@
         NSString *stickyAd=@"http://wamsblureg001orig-hs.cloudapp.net/2e4e7d1f-b72a-4994-a406-810c796fc4fc/The%20Surface%20Movement-m3u8-aapl.ism/Manifest(format=m3u8-aapl)";
         AdInfo *stickyAdInfo = [[[AdInfo alloc] init] autorelease];
         stickyAdInfo.clipURL = [NSURL URLWithString:stickyAd];
-        stickyAdInfo.renderTime = [[[ManifestTime alloc] init] autorelease];
-        stickyAdInfo.renderTime.minManifestPosition = 0;
-        stickyAdInfo.renderTime.maxManifestPosition = 15;
+        stickyAdInfo.mediaTime = [[[MediaTime alloc] init] autorelease];
+        stickyAdInfo.mediaTime.clipBeginMediaTime = 0;
+        stickyAdInfo.mediaTime.clipEndMediaTime = 15;
         stickyAdInfo.policy = [[[PlaybackPolicy alloc] init] autorelease];
         adLinearTime.startTime = 64;
         adLinearTime.duration = 0;
         stickyAdInfo.type = AdType_Midroll;
-        stickyAdInfo.deleteAfterPlay = NO;
+        stickyAdInfo.deleteAfterPlayed = NO;
         
         if (![framework scheduleClip:stickyAdInfo atTime:adLinearTime forType:PlaylistEntryType_Media andGetClipId:&adIndex])
         {
@@ -203,9 +203,9 @@
         NSString *postAdURLString=@"http://wamsblureg001orig-hs.cloudapp.net/aa152d7f-3c54-487b-ba07-a58e0e33280b/wp-m3u8-aapl.ism/Manifest(format=m3u8-aapl)";
         AdInfo *postAdInfo = [[[AdInfo alloc] init] autorelease];
         postAdInfo.clipURL = [NSURL URLWithString:postAdURLString];
-        postAdInfo.renderTime = [[[ManifestTime alloc] init] autorelease];
-        postAdInfo.renderTime.minManifestPosition = 0;
-        postAdInfo.renderTime.maxManifestPosition = 45;
+        postAdInfo.mediaTime = [[[MediaTime alloc] init] autorelease];
+        postAdInfo.mediaTime.clipBeginMediaTime = 0;
+        postAdInfo.mediaTime.clipEndMediaTime = 45;
         postAdInfo.policy = [[[PlaybackPolicy alloc] init] autorelease];
         postAdInfo.type = AdType_Postroll;
         adLinearTime.duration = 0;
@@ -218,10 +218,10 @@
         NSString *adURLString = @"http://smoothstreamingdemo.blob.core.windows.net/videoasset/WA-BumpShort_120530-1.mp4";
         AdInfo *adInfo = [[[AdInfo alloc] init] autorelease];
         adInfo.clipURL = [NSURL URLWithString:adURLString];
-        adInfo.renderTime = [[[ManifestTime alloc] init] autorelease];
-        adInfo.renderTime.currentPlaybackPosition = 0;
-        adInfo.renderTime.minManifestPosition = 0;
-        adInfo.renderTime.maxManifestPosition = 5;
+        adInfo.mediaTime = [[[MediaTime alloc] init] autorelease];
+        adInfo.mediaTime.currentPlaybackPosition = 0;
+        adInfo.mediaTime.clipBeginMediaTime = 0;
+        adInfo.mediaTime.clipEndMediaTime = 5;
         adInfo.policy = [[[PlaybackPolicy alloc] init] autorelease];
         adInfo.appendTo = -1;
         adInfo.type = AdType_Preroll;
@@ -470,10 +470,10 @@
     NSString *adURLString = @"http://smoothstreamingdemo.blob.core.windows.net/videoasset/WA-BumpShort_120530-1.mp4";
     AdInfo *adInfo = [[[AdInfo alloc] init] autorelease];
     adInfo.clipURL = [NSURL URLWithString:adURLString];
-    adInfo.renderTime = [[[ManifestTime alloc] init] autorelease];
-    adInfo.renderTime.currentPlaybackPosition = 0;
-    adInfo.renderTime.minManifestPosition = 0;
-    adInfo.renderTime.maxManifestPosition = 5;
+    adInfo.mediaTime = [[[MediaTime alloc] init] autorelease];
+    adInfo.mediaTime.currentPlaybackPosition = 0;
+    adInfo.mediaTime.clipBeginMediaTime = 0;
+    adInfo.mediaTime.clipEndMediaTime = 5;
     adInfo.policy = [[[PlaybackPolicy alloc] init] autorelease];
     adInfo.appendTo = -1;
     

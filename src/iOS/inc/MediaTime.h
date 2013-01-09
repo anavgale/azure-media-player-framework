@@ -15,16 +15,16 @@
 
 #import <Foundation/Foundation.h>
 
-@interface ManifestTime : NSObject
+@interface MediaTime : NSObject
 {
 @private
     NSTimeInterval currentPlaybackPosition;
-    NSTimeInterval minManifestPosition;
-    NSTimeInterval maxManifestPosition;
+    NSTimeInterval clipBeginMediaTime;
+    NSTimeInterval clipEndMediaTime;
 }
 
 @property(nonatomic, assign) NSTimeInterval currentPlaybackPosition;
-@property(nonatomic, assign) NSTimeInterval minManifestPosition;
-@property(nonatomic, assign) NSTimeInterval maxManifestPosition;
+@property(nonatomic, assign) NSTimeInterval clipBeginMediaTime;
+@property(nonatomic, assign) NSTimeInterval clipEndMediaTime;
 
 @end

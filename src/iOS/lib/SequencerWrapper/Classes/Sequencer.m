@@ -98,11 +98,11 @@ NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
     NSString *nClipType = [nClip objectForKey:@"eClipType"];
     NSNumber *nLinearStartTime = [nClip objectForKey:@"linearStartTime"];
     NSNumber *nLinearDuration = [nClip objectForKey:@"linearDuration"];
-    NSNumber *nMinRenderingTime = [nClip objectForKey:@"minRenderingTime"];
-    NSNumber *nMaxRenderingTime = [nClip objectForKey:@"maxRenderingTime"];
+    NSNumber *nClipBeginMediaTime = [nClip objectForKey:@"clipBeginMediaTime"];
+    NSNumber *nClipEndMediaTime = [nClip objectForKey:@"clipEndMediaTime"];
     NSString *nIsAdvertisement = [nClip objectForKey:@"isAdvertisement"];
     NSDictionary *nPlaybackPolicy = [nClip objectForKey:@"playbackPolicyObj"];
-    NSString *nDeleteAfterPlay = [nClip objectForKey:@"deleteAfterPlay"];
+    NSString *nDeleteAfterPlay = [nClip objectForKey:@"deleteAfterPlayed"];
     NSNumber *nId = [nClip objectForKey:@"id"];
     NSNumber *nIdSplitFrom = [nClip objectForKey:@"idSplitFrom"];
     
@@ -116,11 +116,11 @@ NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
     clip.linearTime = [[[LinearTime alloc] init] autorelease];
     clip.linearTime.startTime = [nLinearStartTime floatValue];
     clip.linearTime.duration = [nLinearDuration floatValue];
-    clip.renderTime = [[[ManifestTime alloc] init] autorelease];
-    clip.renderTime.minManifestPosition = [nMinRenderingTime floatValue];
-    clip.renderTime.maxManifestPosition = [nMaxRenderingTime floatValue];
+    clip.mediaTime = [[[MediaTime alloc] init] autorelease];
+    clip.mediaTime.clipBeginMediaTime = [nClipBeginMediaTime floatValue];
+    clip.mediaTime.clipEndMediaTime = [nClipEndMediaTime floatValue];
     clip.isAdvertisement = [nIsAdvertisement boolValue];
-    clip.deleteAfterPlaying = [nDeleteAfterPlay boolValue];
+    clip.deleteAfterPlayed = [nDeleteAfterPlay boolValue];
     clip.entryId = [nId intValue];
     clip.originalId = [nIdSplitFrom intValue];
     
@@ -200,19 +200,19 @@ NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
 }
 
 //
-// get seekbar time from manifest time
+// get seekbar time from media time
 //
 // Arguments:
 // [seekTime]: the output seekbar time
 // [policy]: the output ad policy object
-// [aManifestTime]: the current playback time in manifest time
+// [aMediaTime]: the current playback time in media time
 // [aRate]: the current playback rate
 // [aSegment]: the current playback segment
 // [rangeExceeded]: output boolean indicating if the playback range has been exceeded.
 //
 // Returns: YES for success and NO for failure
 //
-- (BOOL) getSeekbarTime:(SeekbarTime **)seekTime andPlaybackPolicy:(PlaybackPolicy **)policy withManifestTime:(ManifestTime *)aManifestTime playbackRate:(double)aRate currentSegment:(PlaybackSegment *)aSegment playbackRangeExceeded:(BOOL *)rangeExceeded
+- (BOOL) getSeekbarTime:(SeekbarTime **)seekTime andPlaybackPolicy:(PlaybackPolicy **)policy withMediaTime:(MediaTime *)aMediaTime playbackRate:(double)aRate currentSegment:(PlaybackSegment *)aSegment playbackRangeExceeded:(BOOL *)rangeExceeded
 {
     assert(nil != rangeExceeded);
     *rangeExceeded = NO;
@@ -233,18 +233,18 @@ NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
         isClipChanged = [result isEqualToString:@"true"];
         
         function = [[[NSString alloc] initWithFormat:@"PLAYER_SEQUENCER.sequencerPluginChain.runJSON("
-                     "\"{\\\"func\\\": \\\"manifestToSeekbarTime\\\", "
+                     "\"{\\\"func\\\": \\\"mediaToSeekbarTime\\\", "
                      "\\\"params\\\": "
                      "{ \\\"currentSegmentId\\\": %d, "
                      "\\\"playbackRate\\\": %f, "
                      "\\\"currentPlaybackPosition\\\": %f, "
-                     "\\\"minManifestPosition\\\": %f, "
-                     "\\\"maxManifestPosition\\\": %f } }\")",
+                     "\\\"clipBeginMediaTime\\\": %f, "
+                     "\\\"clipEndMediaTime\\\": %f } }\")",
                      aSegment.segmentId,
                      aRate,
-                     aManifestTime.currentPlaybackPosition,
-                     aManifestTime.minManifestPosition,
-                     aManifestTime.maxManifestPosition] autorelease];
+                     aMediaTime.currentPlaybackPosition,
+                     aMediaTime.clipBeginMediaTime,
+                     aMediaTime.clipEndMediaTime] autorelease];
         result = [self callJavaScriptWithString:function];
         if (nil == result)
         {
@@ -270,23 +270,23 @@ NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
         if (isClipChanged)
         {
             // We need to update the current segment boundary
-            function = [[[NSString alloc] initWithFormat:@"PLAYER_SEQUENCER.playbackSegmentPool.getPlaybackSegment(%d).clip.minRenderingTime",
+            function = [[[NSString alloc] initWithFormat:@"PLAYER_SEQUENCER.playbackSegmentPool.getPlaybackSegment(%d).clip.clipBeginMediaTime",
                          aSegment.segmentId] autorelease];
             result = [self callJavaScriptWithString:function];
             if (nil == result)
             {
                 break;
             }
-            aSegment.clip.renderTime.minManifestPosition = [result floatValue];
+            aSegment.clip.mediaTime.clipBeginMediaTime = [result floatValue];
             
-            function = [[[NSString alloc] initWithFormat:@"PLAYER_SEQUENCER.playbackSegmentPool.getPlaybackSegment(%d).clip.maxRenderingTime",
+            function = [[[NSString alloc] initWithFormat:@"PLAYER_SEQUENCER.playbackSegmentPool.getPlaybackSegment(%d).clip.clipEndMediaTime",
                          aSegment.segmentId] autorelease];
             result = [self callJavaScriptWithString:function];
             if (nil == result)
             {
                 break;
             }
-            aSegment.clip.renderTime.maxManifestPosition = [result floatValue];
+            aSegment.clip.mediaTime.clipEndMediaTime = [result floatValue];
         }
         
         success = YES;
@@ -296,27 +296,27 @@ NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
 }
 
 //
-// get linear time from manifest time
+// get linear time from media time
 //
 // Arguments:
 // [linearTime]: the time in linear time
-// [aManifestTime]: the time in manifest time
+// [aMediaTime]: the time in media time
 // [aSegment]: the current playback segment
 //
 // Returns: YES for success and NO for failure
 //
-- (BOOL) getLinearTime:(NSTimeInterval *)linearTime withManifestTime:(ManifestTime *)aManifestTime currentSegment:(PlaybackSegment *)aSegment
+- (BOOL) getLinearTime:(NSTimeInterval *)linearTime withMediaTime:(MediaTime *)aMediaTime currentSegment:(PlaybackSegment *)aSegment
 {
     assert (nil != linearTime);
     NSString *result = nil;
     
     NSString *function = [[[NSString alloc] initWithFormat:@"PLAYER_SEQUENCER.sequencerPluginChain.runJSON("
-                           "\"{\\\"func\\\": \\\"manifestToLinearTime\\\", "
+                           "\"{\\\"func\\\": \\\"mediaToLinearTime\\\", "
                            "\\\"params\\\": "
                            "{ \\\"currentSegmentId\\\": %d, "
                            "\\\"currentPlaybackPosition\\\": %f } }\")",
                            aSegment.segmentId,
-                           aManifestTime.currentPlaybackPosition] autorelease];
+                           aMediaTime.currentPlaybackPosition] autorelease];
     result = [self callJavaScriptWithString:function];
     if (nil != result)
     {
@@ -389,12 +389,12 @@ NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
 // Arguments:
 // [nextSegment]: the output playback segment
 // [currentSegment]: the current playback segment
-// [playbackPosition]: the current playback time in manifest time
+// [playbackPosition]: the current playback time in media time
 // [playbackRate]: the current playback rate
 //
 // Returns: YES for success and NO for failure
 //
-- (BOOL) getSegmentOnEndOfMedia:(PlaybackSegment **)nextSegment withCurrentSegment:(PlaybackSegment *)currentSegment manifestTime:(NSTimeInterval)playbackPosition currentPlaybackRate:(double)playbackRate isNotPlayed:(BOOL)isNotPlayed isEndOfSequence:(BOOL)isEndOfSequence
+- (BOOL) getSegmentOnEndOfMedia:(PlaybackSegment **)nextSegment withCurrentSegment:(PlaybackSegment *)currentSegment mediaTime:(NSTimeInterval)playbackPosition currentPlaybackRate:(double)playbackRate isNotPlayed:(BOOL)isNotPlayed isEndOfSequence:(BOOL)isEndOfSequence
 {
     NSString *result = nil;
     *nextSegment = nil;
@@ -431,12 +431,12 @@ NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
 // Arguments:
 // [nextSegment]: the output playback segment
 // [currentSegment]: the current playback segment
-// [playbackPosition]: the current playback time in manifest time
+// [playbackPosition]: the current playback time in media time
 // [playbackRate]: the current playback rate
 //
 // Returns: YES for success and NO for failure
 //
-- (BOOL) getSegmentOnEndOfBuffering:(PlaybackSegment **)nextSegment withCurrentSegment:(PlaybackSegment *)currentSegment manifestTime:(NSTimeInterval)playbackPosition currentPlaybackRate:(double)playbackRate
+- (BOOL) getSegmentOnEndOfBuffering:(PlaybackSegment **)nextSegment withCurrentSegment:(PlaybackSegment *)currentSegment mediaTime:(NSTimeInterval)playbackPosition currentPlaybackRate:(double)playbackRate
 {
     NSString *result = nil;
     *nextSegment = nil;
@@ -465,13 +465,13 @@ NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
 // Arguments:
 // [nextSegment]: the output playback segment
 // [currentSegment]: the current playback segment
-// [playbackPosition]: the current playback time in manifest time
+// [playbackPosition]: the current playback time in media time
 // [playbackRate]: the current playback rate
 // [error]: the error for the playlist entry
 //
 // Returns: YES for success and NO for failure
 //
-- (BOOL) getSegmentOnError:(PlaybackSegment **)nextSegment withCurrentSegment:(PlaybackSegment *)currentSegment manifestTime:(NSTimeInterval)playbackPosition currentPlaybackRate:(double)playbackRate error:(NSString *)error isNotPlayed:(BOOL)isNotPlayed isEndOfSequence:(BOOL)isEndOfSequence
+- (BOOL) getSegmentOnError:(PlaybackSegment **)nextSegment withCurrentSegment:(PlaybackSegment *)currentSegment mediaTime:(NSTimeInterval)playbackPosition currentPlaybackRate:(double)playbackRate error:(NSString *)error isNotPlayed:(BOOL)isNotPlayed isEndOfSequence:(BOOL)isEndOfSequence
 {
     NSString *result = nil;
     *nextSegment = nil;

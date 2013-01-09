@@ -119,19 +119,19 @@
                           "\\\"params\\\": "
                           "{ \\\"clipURI\\\": \\\"%s\\\", "
                           "\\\"eClipType\\\": \\\"Media\\\", "
-                          "\\\"minManifestPosition\\\": %f, "
-                          "\\\"maxManifestPosition\\\": %f, "
+                          "\\\"clipBeginMediaTime\\\": %f, "
+                          "\\\"clipEndMediaTime\\\": %f, "
                           "\\\"startTime\\\": %f, "
                           "\\\"linearDuration\\\": %f, "
-                          "\\\"deleteAfterPlay\\\": %s, "
+                          "\\\"deleteAfterPlayed\\\": %s, "
                           "\\\"eRollType\\\": \\\"%@\\\", "
                           "\\\"appendTo\\\": %d } }\")",
                           [[ad.clipURL absoluteString] cStringUsingEncoding:NSUTF8StringEncoding],
-                          ad.renderTime.minManifestPosition,
-                          ad.renderTime.maxManifestPosition,
+                          ad.mediaTime.clipBeginMediaTime,
+                          ad.mediaTime.clipEndMediaTime,
                           linearTime.startTime,
                           linearTime.duration,
-                          ad.deleteAfterPlay ? "true" : "false",
+                          ad.deleteAfterPlayed ? "true" : "false",
                           eRollType,
                           ad.appendTo] autorelease];
     result = [self callJavaScriptWithString:function];
@@ -171,12 +171,12 @@
 //
 // Arguments:
 // [clipURL]: The URL of the clip to be appended
-// [manifestTime]: The minimum and maximum rendering time in the manifest time
+// [mediaTime]: The minimum and maximum rendering time in the media time
 // [clipId]: The output clipId for the content that is appended
 //
 // Returns: YES for success and NO for failure
 //
-- (BOOL) appendContentClip:(NSURL *)clipURL withManifestTime:(ManifestTime *)manifestTime andGetClipId:(int32_t *)clipId
+- (BOOL) appendContentClip:(NSURL *)clipURL withMediaTime:(MediaTime *)mediaTime andGetClipId:(int32_t *)clipId
 {
     assert (nil != clipId);
     NSString *result = nil;
@@ -185,11 +185,11 @@
                           "\"{\\\"func\\\": \\\"appendContentClip\\\", "
                           "\\\"params\\\": "
                           "{ \\\"clipURI\\\": \\\"%s\\\", "
-                          "\\\"minManifestPosition\\\": %f, "
-                          "\\\"maxManifestPosition\\\": %f } }\")",
+                          "\\\"clipBeginMediaTime\\\": %f, "
+                          "\\\"clipEndMediaTime\\\": %f } }\")",
                           [[clipURL absoluteString] cStringUsingEncoding:NSUTF8StringEncoding],
-                          manifestTime.minManifestPosition,
-                          manifestTime.maxManifestPosition] autorelease];
+                          mediaTime.clipBeginMediaTime,
+                          mediaTime.clipEndMediaTime] autorelease];
     result = [self callJavaScriptWithString:function];
     
     if (nil != result)

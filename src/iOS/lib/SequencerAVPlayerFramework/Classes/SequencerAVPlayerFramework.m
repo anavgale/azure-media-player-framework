@@ -350,7 +350,7 @@ NSString *kStatusKey = @"status";
         
         // call onEndOfMedia to release the segment from the segment list
         PlaybackSegment *segment = nil;
-        success = [sequencer getSegmentOnEndOfMedia:&segment withCurrentSegment:segmentToRemove manifestTime:currentSegment.clip.renderTime.maxManifestPosition currentPlaybackRate:1.0 isNotPlayed:YES isEndOfSequence:YES];
+        success = [sequencer getSegmentOnEndOfMedia:&segment withCurrentSegment:segmentToRemove mediaTime:currentSegment.clip.mediaTime.clipEndMediaTime currentPlaybackRate:1.0 isNotPlayed:YES isEndOfSequence:YES];
         [segment release];
         
         if (!success)
@@ -523,12 +523,12 @@ NSString *kStatusKey = @"status";
 //
 // Arguments:
 // [clipURL]: The URL of the clip to be appended
-// [manifestTime]: The minimum and maximum rendering time in the manifest time
+// [mediaTime]: The minimum and maximum rendering time in the media time
 // [clipId]: The output clipId for the content that is appended
 //
 // Returns: YES for success and NO for failure
 //
-- (BOOL) appendContentClip:(NSURL *)clipURL withManifestTime:(ManifestTime *)manifestTime andGetClipId:(int32_t *)clipId
+- (BOOL) appendContentClip:(NSURL *)clipURL withMediaTime:(MediaTime *)mediaTime andGetClipId:(int32_t *)clipId
 {
     BOOL success = NO;
     
@@ -538,7 +538,7 @@ NSString *kStatusKey = @"status";
     }
     else
     {
-        success = [sequencer.scheduler appendContentClip:clipURL withManifestTime:manifestTime andGetClipId:clipId];
+        success = [sequencer.scheduler appendContentClip:clipURL withMediaTime:mediaTime andGetClipId:clipId];
         if (!success)
         {
             self.lastError = sequencer.scheduler.lastError;
@@ -804,6 +804,8 @@ NSString *kStatusKey = @"status";
             CMTime targetTime = CMTimeMakeWithSeconds(seconds, NSEC_PER_SEC);
             [moviePlayer seekToTime:targetTime];
         }
+        
+        NSLog(@"Clip change: Start playback for url: %@\n", currentSegment.clip.clipURI);
     }
     
     // We need to pause or delete the previous player
@@ -884,7 +886,8 @@ NSString *kStatusKey = @"status";
             case AVPlayerItemStatusReadyToPlay:
                 {
                     NSLog(@"Status update: AVPlayerItemStatusReadyToPlay");
-                    
+                    NSLog(@"Clip change rebuffering: clip url: %@\n is ready to play", nextSegment.clip.clipURI);
+
                     if (PlayerStatus_Loading == nextSegment.status)
                     {
                         // The content is loaded but playback start time is still in the future
@@ -937,6 +940,7 @@ NSString *kStatusKey = @"status";
                 {
                     // This can happen when there is a seek within the same player
                     NSLog(@"Status update: AVPlayerItemStatusReadyToPlay");
+                    NSLog(@"Clip change rebuffering: clip url: %@\n is ready to play", currentSegment.clip.clipURI);
                 }
                 break;
                 
@@ -988,11 +992,11 @@ NSString *kStatusKey = @"status";
             PlaybackSegment *segment = nil;
             if (nil != currentSegment.error)
             {
-                success = [sequencer getSegmentOnError:&segment withCurrentSegment:currentSegment manifestTime:currTime currentPlaybackRate:rate error:currentSegment.error isNotPlayed:NO isEndOfSequence:NO];
+                success = [sequencer getSegmentOnError:&segment withCurrentSegment:currentSegment mediaTime:currTime currentPlaybackRate:rate error:currentSegment.error isNotPlayed:NO isEndOfSequence:NO];
             }
             else
             {
-                success = [sequencer getSegmentOnEndOfMedia:&segment withCurrentSegment:currentSegment manifestTime:currTime currentPlaybackRate:rate isNotPlayed:NO isEndOfSequence:NO];
+                success = [sequencer getSegmentOnEndOfMedia:&segment withCurrentSegment:currentSegment mediaTime:currTime currentPlaybackRate:rate isNotPlayed:NO isEndOfSequence:NO];
             }
             if (!success)
             {
@@ -1069,13 +1073,31 @@ NSString *kStatusKey = @"status";
     
     CMTime cmCurrTime = moviePlayer.currentTime;
     NSTimeInterval currTime = (double)cmCurrTime.value / cmCurrTime.timescale;
-    if (![sequencer getSegmentOnEndOfBuffering:&segment withCurrentSegment:currentSegment manifestTime:currTime currentPlaybackRate:rate])
+    if (![sequencer getSegmentOnEndOfBuffering:&segment withCurrentSegment:currentSegment mediaTime:currTime currentPlaybackRate:rate])
     {
         self.lastError = sequencer.lastError;
         [self sendErrorNotification];
     }
     else
     {
+        if (PlaylistEntryType_SeekToStart == segment.clip.type)
+        {
+            NSLog(@"Clip change prebuffering: SeekToStart detected");
+            
+            // Try to get the next segment
+            PlaybackSegment *newSegment = nil;
+            if (![sequencer getSegmentOnEndOfBuffering:&newSegment withCurrentSegment:segment mediaTime:currTime currentPlaybackRate:rate])
+            {
+                self.lastError = sequencer.lastError;
+                [self sendErrorNotification];
+            }
+            else
+            {
+                [segment release];
+                segment = newSegment;
+            }
+        }
+        
         self.nextSegment = segment;
         [segment release];
         
@@ -1134,9 +1156,11 @@ NSString *kStatusKey = @"status";
     
     if (PlaylistEntryType_SeekToStart == nextSegment.clip.type)
     {
+        NSLog(@"Clip change: SeekToStart detected");
+        
         // Try to get the next segment
         PlaybackSegment *segment = nil;
-        success = [sequencer getSegmentOnEndOfMedia:&segment withCurrentSegment:nextSegment manifestTime:0 currentPlaybackRate:rate isNotPlayed:NO isEndOfSequence:NO];
+        success = [sequencer getSegmentOnEndOfMedia:&segment withCurrentSegment:nextSegment mediaTime:0 currentPlaybackRate:rate isNotPlayed:NO isEndOfSequence:NO];
         if (!success)
         {
             self.lastError = sequencer.lastError;
@@ -1176,13 +1200,13 @@ NSString *kStatusKey = @"status";
 - (NSTimeInterval) currentLinearTime
 {
     NSTimeInterval currentTime = 0;
-    ManifestTime *manifestTime = [[ManifestTime alloc] init];
-    manifestTime.currentPlaybackPosition = self.currentPlaybackTime;
+    MediaTime *mediaTime = [[MediaTime alloc] init];
+    mediaTime.currentPlaybackPosition = self.currentPlaybackTime;
     if (nil != sequencer)
     {
-        [sequencer getLinearTime:&currentTime withManifestTime:(ManifestTime *)manifestTime currentSegment:currentSegment];
+        [sequencer getLinearTime:&currentTime withMediaTime:(MediaTime *)mediaTime currentSegment:currentSegment];
     }
-    [manifestTime release];
+    [mediaTime release];
     
     return currentTime;
 }
@@ -1248,16 +1272,16 @@ NSString *kStatusKey = @"status";
         
         // Get seekbar time from the sequencer
         PlaybackPolicy *playbackPolicy = nil;
-        ManifestTime *currentManifestTime = [[ManifestTime alloc] init];
-        currentManifestTime.currentPlaybackPosition = currPlaybackTime;
-        currentManifestTime.minManifestPosition = currentSegment.clip.renderTime.minManifestPosition;
-        currentManifestTime.maxManifestPosition = currentSegment.clip.renderTime.maxManifestPosition;
+        MediaTime *currentMediaTime = [[MediaTime alloc] init];
+        currentMediaTime.currentPlaybackPosition = currPlaybackTime;
+        currentMediaTime.clipBeginMediaTime = currentSegment.clip.mediaTime.clipBeginMediaTime;
+        currentMediaTime.clipEndMediaTime = currentSegment.clip.mediaTime.clipEndMediaTime;
         BOOL segmentEnded = NO;
-        if (![sequencer getSeekbarTime:&seekbarTime andPlaybackPolicy:&playbackPolicy withManifestTime:currentManifestTime playbackRate:rate currentSegment:self.currentSegment playbackRangeExceeded:&segmentEnded])
+        if (![sequencer getSeekbarTime:&seekbarTime andPlaybackPolicy:&playbackPolicy withMediaTime:currentMediaTime playbackRate:rate currentSegment:self.currentSegment playbackRangeExceeded:&segmentEnded])
         {
             self.lastError = sequencer.lastError;
             [self sendErrorNotification];
-            [currentManifestTime release];
+            [currentMediaTime release];
             return;
         }
         
@@ -1290,7 +1314,7 @@ NSString *kStatusKey = @"status";
                 [self sendErrorNotification];
             }
         }
-        else if ((currentSegment.clip.renderTime.maxManifestPosition - currPlaybackTime < BUFFERING_COMPLETE_BEFORE_EOS_SEC) &&
+        else if ((currentSegment.clip.mediaTime.clipEndMediaTime - currPlaybackTime < BUFFERING_COMPLETE_BEFORE_EOS_SEC) &&
                  (nil == nextSegment))
         {
             // Should start to pre-load the next content
@@ -1301,7 +1325,7 @@ NSString *kStatusKey = @"status";
             // TODO: enforce playback policy
         }
         
-        [currentManifestTime release];        
+        [currentMediaTime release];
     }
 }
 

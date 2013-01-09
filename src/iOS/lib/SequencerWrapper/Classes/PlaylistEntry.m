@@ -25,9 +25,9 @@
 @synthesize originalId;
 @synthesize linearTime;
 @synthesize clipURI;
-@synthesize renderTime;
+@synthesize mediaTime;
 @synthesize isAdvertisement;
-@synthesize deleteAfterPlaying;
+@synthesize deleteAfterPlayed;
 @synthesize playbackPolicy;
 
 #pragma mark -
@@ -39,7 +39,7 @@
     
     [linearTime release];
     [clipURI release];
-    [renderTime release];
+    [mediaTime release];
     [playbackPolicy release];
     
     [super dealloc];

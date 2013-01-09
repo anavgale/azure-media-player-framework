@@ -7,11 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3244686E169CA7F400FE7B0A /* MediaTime.m in Sources */ = {isa = PBXBuildFile; fileRef = 3244686D169CA7F400FE7B0A /* MediaTime.m */; };
 		329DB91C1611049C004C6873 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 329DB91B1611049C004C6873 /* Foundation.framework */; };
 		329DB92A16110984004C6873 /* AdInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = 329DB92916110984004C6873 /* AdInfo.m */; };
 		329DB92C16110993004C6873 /* AdResolver.m in Sources */ = {isa = PBXBuildFile; fileRef = 329DB92B16110993004C6873 /* AdResolver.m */; };
 		329DB92E161109C8004C6873 /* LinearTime.m in Sources */ = {isa = PBXBuildFile; fileRef = 329DB92D161109C8004C6873 /* LinearTime.m */; };
-		329DB930161109D6004C6873 /* ManifestTime.m in Sources */ = {isa = PBXBuildFile; fileRef = 329DB92F161109D6004C6873 /* ManifestTime.m */; };
 		329DB932161109EA004C6873 /* PlaybackPolicy.m in Sources */ = {isa = PBXBuildFile; fileRef = 329DB931161109EA004C6873 /* PlaybackPolicy.m */; };
 		329DB93416110A0B004C6873 /* PlaybackSegment.m in Sources */ = {isa = PBXBuildFile; fileRef = 329DB93316110A0B004C6873 /* PlaybackSegment.m */; };
 		329DB93616110A17004C6873 /* PlaylistEntry.m in Sources */ = {isa = PBXBuildFile; fileRef = 329DB93516110A17004C6873 /* PlaylistEntry.m */; };
@@ -33,6 +33,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		3244686D169CA7F400FE7B0A /* MediaTime.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = MediaTime.m; path = Classes/MediaTime.m; sourceTree = "<group>"; };
 		329DB9181611049C004C6873 /* libSequencerWrapper.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libSequencerWrapper.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		329DB91B1611049C004C6873 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		329DB92916110984004C6873 /* AdInfo.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = AdInfo.m; path = Classes/AdInfo.m; sourceTree = "<group>"; };
@@ -62,6 +63,7 @@
 		329DB90D1611049B004C6873 = {
 			isa = PBXGroup;
 			children = (
+				3244686D169CA7F400FE7B0A /* MediaTime.m */,
 				329DB93B16110A4D004C6873 /* Sequencer.m */,
 				329DB93916110A3A004C6873 /* SeekbarTime.m */,
 				329DB93716110A24004C6873 /* Scheduler.m */,
@@ -144,13 +146,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3244686E169CA7F400FE7B0A /* MediaTime.m in Sources */,
 				329DB93C16110A4D004C6873 /* Sequencer.m in Sources */,
 				329DB93A16110A3A004C6873 /* SeekbarTime.m in Sources */,
 				329DB93816110A24004C6873 /* Scheduler.m in Sources */,
 				329DB93616110A17004C6873 /* PlaylistEntry.m in Sources */,
 				329DB93416110A0B004C6873 /* PlaybackSegment.m in Sources */,
 				329DB932161109EA004C6873 /* PlaybackPolicy.m in Sources */,
-				329DB930161109D6004C6873 /* ManifestTime.m in Sources */,
 				329DB92E161109C8004C6873 /* LinearTime.m in Sources */,
 				329DB92C16110993004C6873 /* AdResolver.m in Sources */,
 				329DB92A16110984004C6873 /* AdInfo.m in Sources */,

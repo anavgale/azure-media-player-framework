@@ -36,13 +36,13 @@
 @property(nonatomic, retain) NSError *lastError;
 
 - (id)init;
-- (BOOL) getSeekbarTime:(SeekbarTime **)seekTime andPlaybackPolicy:(PlaybackPolicy **)policy withManifestTime:(ManifestTime *)aManifestTime playbackRate:(double)aRate currentSegment:(PlaybackSegment *)aSegment playbackRangeExceeded:(BOOL *)rangeExceeded;
-- (BOOL) getLinearTime:(NSTimeInterval *)linearTime withManifestTime:(ManifestTime *)aManifestTime currentSegment:(PlaybackSegment *)aSegment;
+- (BOOL) getSeekbarTime:(SeekbarTime **)seekTime andPlaybackPolicy:(PlaybackPolicy **)policy withMediaTime:(MediaTime *)aMediaTime playbackRate:(double)aRate currentSegment:(PlaybackSegment *)aSegment playbackRangeExceeded:(BOOL *)rangeExceeded;
+- (BOOL) getLinearTime:(NSTimeInterval *)linearTime withMediaTime:(MediaTime *)aMediaTime currentSegment:(PlaybackSegment *)aSegment;
 - (BOOL) getSegmentAfterSeek:(PlaybackSegment **)seekSegment withLinearPosition:(NSTimeInterval)linearSeekPosition;
 - (BOOL) getSegmentAfterSeek:(PlaybackSegment **)seekSegment withSeekbarPosition:(SeekbarTime *)seekbarPosition currentSegment:(PlaybackSegment *)aSegment;
-- (BOOL) getSegmentOnEndOfMedia:(PlaybackSegment **)nextSegment withCurrentSegment:(PlaybackSegment *)currentSegment manifestTime:(NSTimeInterval)playbackPosition currentPlaybackRate:(double)playbackRate isNotPlayed:(BOOL)isNotPlayed isEndOfSequence:(BOOL)isEndOfSequence;
-- (BOOL) getSegmentOnEndOfBuffering:(PlaybackSegment **)nextSegment withCurrentSegment:(PlaybackSegment *)currentSegment manifestTime:(NSTimeInterval)playbackPosition currentPlaybackRate:(double)playbackRate;
-- (BOOL) getSegmentOnError:(PlaybackSegment **)nextSegment withCurrentSegment:(PlaybackSegment *)currentSegment manifestTime:(NSTimeInterval)playbackPosition currentPlaybackRate:(double)playbackRate error:(NSString *)error isNotPlayed:(BOOL)isNotPlayed isEndOfSequence:(BOOL)isEndOfSequence;
+- (BOOL) getSegmentOnEndOfMedia:(PlaybackSegment **)nextSegment withCurrentSegment:(PlaybackSegment *)currentSegment mediaTime:(NSTimeInterval)playbackPosition currentPlaybackRate:(double)playbackRate isNotPlayed:(BOOL)isNotPlayed isEndOfSequence:(BOOL)isEndOfSequence;
+- (BOOL) getSegmentOnEndOfBuffering:(PlaybackSegment **)nextSegment withCurrentSegment:(PlaybackSegment *)currentSegment mediaTime:(NSTimeInterval)playbackPosition currentPlaybackRate:(double)playbackRate;
+- (BOOL) getSegmentOnError:(PlaybackSegment **)nextSegment withCurrentSegment:(PlaybackSegment *)currentSegment mediaTime:(NSTimeInterval)playbackPosition currentPlaybackRate:(double)playbackRate error:(NSString *)error isNotPlayed:(BOOL)isNotPlayed isEndOfSequence:(BOOL)isEndOfSequence;
 
 @end
 

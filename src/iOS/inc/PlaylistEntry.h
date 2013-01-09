@@ -15,7 +15,7 @@
 
 #import <Foundation/Foundation.h>
 
-#import "ManifestTime.h"
+#import "MediaTime.h"
 #import "LinearTime.h"
 #import "PlaybackPolicy.h"
 
@@ -35,9 +35,9 @@ typedef enum
     int32_t originalId;
     LinearTime *linearTime;
     NSURL *clipURI;
-    ManifestTime *renderTime;
+    MediaTime *mediaTime;
     BOOL isAdvertisement;
-    BOOL deleteAfterPlaying;
+    BOOL deleteAfterPlayed;
     PlaybackPolicy *playbackPolicy;
 }
 
@@ -46,9 +46,9 @@ typedef enum
 @property(nonatomic, assign) int32_t originalId;
 @property(nonatomic, retain) LinearTime *linearTime;
 @property(nonatomic, retain) NSURL *clipURI;
-@property(nonatomic, retain) ManifestTime *renderTime;
+@property(nonatomic, retain) MediaTime *mediaTime;
 @property(nonatomic, assign) BOOL isAdvertisement;
-@property(nonatomic, assign) BOOL deleteAfterPlaying;
+@property(nonatomic, assign) BOOL deleteAfterPlayed;
 @property(nonatomic, retain) PlaybackPolicy *playbackPolicy;
 
 @end

@@ -26,10 +26,10 @@ PLAYER_SEQUENCER.createCustomSequencerPlugin = function (customPlugin) {
     
     // Replace the default pass-through methods
     
-    // This is a sample code to throw exception in manifestToSeekbarTime to test
+    // This is a sample code to throw exception in mediaToSeekbarTime to test
     // if the plugin is successfully created. Please remove this or replace this with real implementation
     // if you want to implement a custom sequencer plugin
-//    customPlugin.manifestToSeekbarTime = function ( params ) {
+//    customPlugin.mediaToSeekbarTime = function ( params ) {
 //        throw new PLAYER_SEQUENCER.SequencerError('If you see this the plugin is correctly added to the project');
 //    };
 };

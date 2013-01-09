@@ -127,11 +127,11 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
                     eClipType: null,            // string - 'Media', 'Static', 'VAST', 'SeekToStart', 'ProgramContent'
                     linearStartTime: 0,         // number
                     linearDuration: 0,          // number - zero for pause timeline true
-                    minRenderingTime: 0,        // number - clip begin
-                    maxRenderingTime: 0,        // number - clip end
+                    clipBeginMediaTime: 0,      // number - clip begin
+                    clipEndMediaTime: 0,        // number - clip end
                     isAdvertisement: true,      // boolean
                     playbackPolicyObj: {},      // opaque - playback policy object
-                    deleteAfterPlay: false,     // boolean
+                    deleteAfterPlayed: false,     // boolean
                     get id () { return myId; },
                     set id (value) { throwSetterInhibited(value); },
                     get idSplitFrom () { return myIdSplitFrom; },
@@ -153,11 +153,11 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
                     playlistEntry.eClipType = playlist[indexToSplitFrom].eClipType;
                     playlistEntry.linearStartTime = playlist[indexToSplitFrom].linearStartTime + splitTimeDelta;
                     playlistEntry.linearDuration = playlist[indexToSplitFrom].linearDuration - splitTimeDelta;
-                    playlistEntry.minRenderingTime = playlist[indexToSplitFrom].minRenderingTime + splitTimeDelta;
-                    playlistEntry.maxRenderingTime = playlist[indexToSplitFrom].maxRenderingTime;
+                    playlistEntry.clipBeginMediaTime = playlist[indexToSplitFrom].clipBeginMediaTime + splitTimeDelta;
+                    playlistEntry.clipEndMediaTime = playlist[indexToSplitFrom].clipEndMediaTime;
                     playlistEntry.isAdvertisement = playlist[indexToSplitFrom].isAdvertisement;
                     playlistEntry.playbackPolicyObj = playlist[indexToSplitFrom].playbackPolicyObj;
-                    playlistEntry.deleteAfterPlay = playlist[indexToSplitFrom].deleteAfterPlay;
+                    playlistEntry.deleteAfterPlayed = playlist[indexToSplitFrom].deleteAfterPlayed;
                 }
                 return playlistEntry;
             },
@@ -200,7 +200,7 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
                     entrySplit = this.createEntry(entryFound.id, splitOffsetTime);
 
                     entryFound.incrementSplitCount( privateMethodKey );
-                    entryFound.maxRenderingTime = entrySplit.minRenderingTime;
+                    entryFound.clipEndMediaTime = entrySplit.clipBeginMediaTime;
                     entryFound.linearDuration = splitOffsetTime;
 
                     playlistEntry.linearStartTime = entryFound.linearStartTime + entryFound.linearDuration;
@@ -242,7 +242,7 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
                 ///<summary>Insert the provided entry at the beginning of the playList.</summary>
                 ///<param name="playlistEntry" type="Object">The playlistEntry to be inserted at the beginning of the sequentialPlayList.</param>
                 if (playlistEntry.linearDuration > 0) {
-                    // TODO: handle overlay preroll ad case (adjust underlying main content linear and rendering times)
+                    // TODO: handle overlay preroll ad case (adjust underlying main content linear and begin/end media times)
                     throw new PLAYER_SEQUENCER.SchedulerError('insertEntryBeforeBeginning overlay ad not yet supported');
                 }
                 playlist.unshift(playlistEntry);
@@ -263,7 +263,7 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
                     playlist.splice(i + 1, 0, playlistEntry);
                 }
                 else {
-                    // TODO: handle overlay ad case (adjust underlying main content linear and rendering times)
+                    // TODO: handle overlay ad case (adjust underlying main content linear and begin/end media times)
                     throw new PLAYER_SEQUENCER.SchedulerError('insertEntryAfterId overlay ad not yet supported');
                 }
             },
@@ -305,14 +305,14 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
                 }
                 // Note: the "splitCount" is being used as a "changed count" here:
                 objRemoved.incrementSplitCount( privateMethodKey );
-                // Clear the deleteAfterPlay flag so access.onPlayedEntry will not remove again
-                objRemoved.deleteAfterPlay = false;
+                // Clear the deleteAfterPlayed flag so access.onPlayedEntry will not remove again
+                objRemoved.deleteAfterPlayed = false;
 
                 // if entry after the one removed was spliced from the entry before the one removed,
                 if (i > 0 && i < playlist.length && playlist[i-1].idSplitFrom === playlist[i].idSplitFrom) {
                     // weld the after entry onto the before entry and indicate it has changed:
                     playlist[i-1].linearDuration += playlist[i].linearDuration + objRemoved.linearDuration;
-                    playlist[i-1].maxRenderingTime = playlist[i].maxRenderingTime;
+                    playlist[i-1].clipEndMediaTime = playlist[i].clipEndMediaTime;
                     playlist[i-1].incrementSplitCount( privateMethodKey );
                     // indicate the after entry has changed:
                     playlist[i].incrementSplitCount( privateMethodKey );
@@ -377,8 +377,8 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
 
             onPlayedEntry: function (playlistEntry) {
                 ///<summary>Notify that a given playlistEntry has been played.</summary>
-                ///<param name="playlistEntry" type="Object">The playlist entry that has been played. This entry will be removed from the sequentialPlaylist if the deleteAfterPlay flag is set.</param>
-                if (playlistEntry.deleteAfterPlay) {
+                ///<param name="playlistEntry" type="Object">The playlist entry that has been played. This entry will be removed from the sequentialPlaylist if the deleteAfterPlayed flag is set.</param>
+                if (playlistEntry.deleteAfterPlayed) {
                     newSeqPlaylist.change.remove(playlistEntry.id);
                 }
             }
@@ -419,8 +419,8 @@ PLAYER_SEQUENCER.createScheduler = function (sequentialPlaylist) {
             ///<returns type="Object">The parameters object to be filled in before calling appendContentClip.</returns>
             return {
                 clipURI: null,              // string: the Media URI
-                minManifestPosition: 0,     // number: the minimum manifest time for the clip
-                maxManifestPosition: 0      // number: the maximum manifest time for the clip
+                clipBeginMediaTime: 0,      // number: the minimum media time for the clip
+                clipEndMediaTime: 0         // number: the maximum media time for the clip
                                             // Note: duration is (max - min) and must be > 1.0
             };
         },
@@ -431,12 +431,12 @@ PLAYER_SEQUENCER.createScheduler = function (sequentialPlaylist) {
             return {
                 clipURI: null,              // string: the clip URL
                 eClipType: null,            // string: the the clip type: 'Media', 'Static', or 'VAST'
-                minManifestPosition: 0,     // number: the minimum manifest time for the clip
-                maxManifestPosition: 0,     // number: the maximum manifest time the clip will play to (duration of the clip)
+                clipBeginMediaTime: 0,      // number: the minimum media time for the clip
+                clipEndMediaTime: 0,        // number: the maximum media time the clip will play to (duration of the clip)
                 startTime: 0,               // number: the clip start time in the linear time; only used for eTypeMidroll
                 linearDuration: 0,          // number: 0 for pauseTimeline true ad, and duration for pauseTimeline false ad
                 playbackPolicyObj: {},      // Object: the opaque playback policy object for the clip (sequencer implementation dependent)
-                deleteAfterPlay: false,     // boolean: if the ad should be deleted after playback
+                deleteAfterPlayed: false,     // boolean: if the ad should be deleted after playback
                 eRollType: null,            // string: the "roll" type: 'Pre', 'Post', 'Mid', 'Now', or 'Pod'
                 appendTo: -1                // number: the id of the playlistEntry to append to in an ad pod, otherwise leave default of -1
             };
@@ -466,17 +466,17 @@ PLAYER_SEQUENCER.createScheduler = function (sequentialPlaylist) {
             // Note: eClipType is ignored:
             playlistEntry.eClipType = 'ProgramContent';
 
-            if (typeof params.minManifestPosition !== 'number') {
-                throw new PLAYER_SEQUENCER.SchedulerError('appendContentClip minManifestPosition not a number');
+            if (typeof params.clipBeginMediaTime !== 'number') {
+                throw new PLAYER_SEQUENCER.SchedulerError('appendContentClip clipBeginMediaTime not a number');
             }
-            playlistEntry.minRenderingTime = params.minManifestPosition;
+            playlistEntry.clipBeginMediaTime = params.clipBeginMediaTime;
 
-            if (typeof params.maxManifestPosition !== 'number') {
-                throw new PLAYER_SEQUENCER.SchedulerError('appendContentClip maxManifestPosition not a number');
+            if (typeof params.clipEndMediaTime !== 'number') {
+                throw new PLAYER_SEQUENCER.SchedulerError('appendContentClip clipEndMediaTime not a number');
             }
-            playlistEntry.maxRenderingTime = params.maxManifestPosition;
+            playlistEntry.clipEndMediaTime = params.clipEndMediaTime;
 
-            playlistEntry.linearDuration = playlistEntry.maxRenderingTime - playlistEntry.minRenderingTime;
+            playlistEntry.linearDuration = playlistEntry.clipEndMediaTime - playlistEntry.clipBeginMediaTime;
 
             if (isDurationTooSmall(playlistEntry.linearDuration)) {
                 throw new PLAYER_SEQUENCER.SchedulerError('appendContentClip duration too small: ' + playlistEntry.linearDuration.toString());
@@ -492,7 +492,7 @@ PLAYER_SEQUENCER.createScheduler = function (sequentialPlaylist) {
             ///<summary>Schedule an ad clip. Must not be called until main content that contains the clip has been scheduled.</summary>
             ///<param name="params" type="Object">An object obtained with createScheduleClipParams and then filled in with specific values.</param>
             ///<returns type="Object">The playlistEntry created for the clip.</returns>
-            var playlistEntry, renderingDuration;
+            var playlistEntry, clipMediaTimeDuration;
 
             playlistEntry = mySequentialPlaylist.createEntry();
 
@@ -500,21 +500,21 @@ PLAYER_SEQUENCER.createScheduler = function (sequentialPlaylist) {
             playlistEntry.eClipType = params.eClipType;
             playlistEntry.linearDuration = params.linearDuration;
 
-            if (params.minManifestPosition !== undefined) {
-                playlistEntry.minRenderingTime = params.minManifestPosition;
+            if (params.clipBeginMediaTime !== undefined) {
+                playlistEntry.clipBeginMediaTime = params.clipBeginMediaTime;
             }
-            if (params.maxManifestPosition !== undefined) {
-                renderingDuration = params.maxManifestPosition - playlistEntry.minRenderingTime;
-                if (isDurationTooSmall(renderingDuration)) {
-                    throw new PLAYER_SEQUENCER.SchedulerError('scheduleClip maxManifestPosition too small. Delta: ' + renderingDuration.toString());
+            if (params.clipEndMediaTime !== undefined) {
+                clipMediaTimeDuration = params.clipEndMediaTime - playlistEntry.clipBeginMediaTime;
+                if (isDurationTooSmall(clipMediaTimeDuration)) {
+                    throw new PLAYER_SEQUENCER.SchedulerError('scheduleClip clipEndMediaTime too small. Delta: ' + clipMediaTimeDuration.toString());
                 }
-                playlistEntry.maxRenderingTime = params.maxManifestPosition;
+                playlistEntry.clipEndMediaTime = params.clipEndMediaTime;
             }
             else if (playlistEntry.linearDuration === 0) {
-                throw new PLAYER_SEQUENCER.SchedulerError('scheduleClip cannot determine maxRenderingTime given missing maxManifestPosition and zero linearDuration');
+                throw new PLAYER_SEQUENCER.SchedulerError('scheduleClip cannot determine clipEndMediaTime given missing clipEndMediaTime and zero linearDuration');
             }
             else {
-                playlistEntry.maxRenderingTime = playlistEntry.minRenderingTime + playlistEntry.linearDuration;
+                playlistEntry.clipEndMediaTime = playlistEntry.clipBeginMediaTime + playlistEntry.linearDuration;
             }
 
             playlistEntry.isAdvertisement = true;
@@ -527,8 +527,8 @@ PLAYER_SEQUENCER.createScheduler = function (sequentialPlaylist) {
             if (params.playbackPolicyObj !== undefined) {
                 playlistEntry.playbackPolicyObj = params.playbackPolicyObj;
             }
-            if (params.deleteAfterPlay !== undefined) {
-                playlistEntry.deleteAfterPlay = params.deleteAfterPlay;
+            if (params.deleteAfterPlayed !== undefined) {
+                playlistEntry.deleteAfterPlayed = params.deleteAfterPlayed;
             }
 
             switch (params.eRollType) {
@@ -568,8 +568,8 @@ PLAYER_SEQUENCER.createScheduler = function (sequentialPlaylist) {
                 playlistEntry.clipURI = params.clipURI;
             }
             playlistEntry.eClipType = 'SeekToStart';
-            playlistEntry.maxRenderingTime = -1; // flag unbounded
-            playlistEntry.deleteAfterPlay = true;
+            playlistEntry.clipEndMediaTime = -1; // flag unbounded
+            playlistEntry.deleteAfterPlayed = true;
             playlistEntry.isAdvertisement = true;
 
             return mySequentialPlaylist.insertSeekToStart(playlistEntry);
