@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<VAST xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xsi:noNamespaceSchemaLocation="vast.xsd" 
+    xmlns:psns="http://microsoft.com/namespace/playersequencer/iabExtensions.xsd"
+    version="2.0">
+    
+<Ad id="1" sequence="1">
+    <InLine>
+    <AdSystem>test</AdSystem>
+    <AdTitle>content video clip 1</AdTitle>
+    <Description>video ad</Description>
+    <Impression><![CDATA[http://example.com/ad/view]]></Impression>
+    <Creatives>
+        <Creative>
+            <Linear>
+                <Duration>00:01:13</Duration>
+                <MediaFiles>
+                    <MediaFile delivery="streaming" width="852" height="480" type="application/vnd.apple.mpegURL">
+                        <![CDATA[http://wamsblureg001orig-hs.cloudapp.net/53bd66eb-8cba-43a8-99d2-1a2a47289fb4/The%20Making%20of%20Touch%20Cover%20for%20Surface-m3u8-aapl.ism/Manifest(format=m3u8-aapl)]]>
+                    </MediaFile>
+                    <MediaFile delivery="progressive" width="852" height="480" type="video/webm">
+                        <![CDATA[http://htmlsamples.blob.core.windows.net/video/The_Making_of_Touch_Cover_for_Surface.webm]]>
+                    </MediaFile>
+                    <MediaFile delivery="progressive" width="852" height="480" type="video/mp4">
+                        <![CDATA[http://htmlsamples.blob.core.windows.net/video/The_Making_of_Touch_Cover_for_Surface_852x480.mp4]]>
+                    </MediaFile>
+                </MediaFiles>
+            </Linear>
+        </Creative>
+    </Creatives>
+    </InLine>
+</Ad>
+
+<Ad id="2" sequence="2">
+    <InLine>
+    <AdSystem>test</AdSystem>
+    <AdTitle>content video clip 2</AdTitle>
+    <Description>video ad</Description>
+    <Impression><![CDATA[http://example.com/ad/view]]></Impression>
+    <Creatives>
+        <Creative>
+            <Linear>
+                <Duration>00:00:27</Duration>
+                <MediaFiles>
+                    <MediaFile delivery="streaming" width="852" height="480" type="application/vnd.apple.mpegURL" psns:mediaTimeOffset="73">
+                        <![CDATA[http://wamsblureg001orig-hs.cloudapp.net/53bd66eb-8cba-43a8-99d2-1a2a47289fb4/The%20Making%20of%20Touch%20Cover%20for%20Surface-m3u8-aapl.ism/Manifest(format=m3u8-aapl)]]>
+                    </MediaFile>
+                    <MediaFile delivery="progressive" width="852" height="480" type="video/webm" psns:mediaTimeOffset="73">
+                        <![CDATA[http://htmlsamples.blob.core.windows.net/video/The_Making_of_Touch_Cover_for_Surface.webm]]>
+                    </MediaFile>
+                    <MediaFile delivery="progressive" width="852" height="480" type="video/mp4" psns:mediaTimeOffset="73">
+                        <![CDATA[http://htmlsamples.blob.core.windows.net/video/The_Making_of_Touch_Cover_for_Surface_852x480.mp4]]>
+                    </MediaFile>
+                </MediaFiles>
+            </Linear>
+        </Creative>
+    </Creatives>
+    </InLine>
+</Ad>
+
+</VAST>

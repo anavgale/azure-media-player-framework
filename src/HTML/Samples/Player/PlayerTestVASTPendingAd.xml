@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<VAST xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xsi:noNamespaceSchemaLocation="vast.xsd" 
+    xmlns:psns="http://microsoft.com/namespace/playersequencer/iabExtensions.xsd"
+    version="2.0">
+<Ad id="1234">
+<InLine>
+<AdSystem>GDFP</AdSystem>
+<AdTitle>Pending ad video</AdTitle>
+<Description>video ad</Description>
+<Error><![CDATA[http://example.com/ad/error/?label=videoplayfailed]]></Error>
+<Impression><![CDATA[http://example.com/ad/view]]></Impression>
+<Creatives>
+    <Creative sequence="1">
+        <Linear>
+            <Duration>00:00:05.6</Duration>
+            <MediaFiles>
+                <MediaFile delivery="streaming" width="852" height="480" type="application/vnd.apple.mpegURL">
+                    <![CDATA[http://wamsblureg001orig-hs.cloudapp.net/5389c0c5-340f-48d7-90bc-0aab664e5f02/Windows%208_%20You%20and%20Me%20Together-m3u8-aapl.ism/Manifest(format=m3u8-aapl)]]>
+                </MediaFile>
+                <MediaFile id="GDFP" delivery="progressive" bitrate="1230" width="852" height="480" type="video/webm" scalable="true" maintainAspectRatio="true">
+                    <![CDATA[http://htmlsamples.blob.core.windows.net/video/Windows_8_You_and_Me_Together.webm]]>
+                </MediaFile>
+                <MediaFile id="GDFP" delivery="progressive" bitrate="1230" width="852" height="480" type="video/mp4" scalable="true" maintainAspectRatio="true">
+                    <![CDATA[http://htmlsamples.blob.core.windows.net/video/Windows_8_You_and_Me_Together_852x480.mp4]]>
+                </MediaFile>
+            </MediaFiles>
+        </Linear>
+    </Creative>
+</Creatives>
+<Extensions>
+    <Extension type="geo">
+        <Bandwidth>4</Bandwidth>
+    </Extension>
+</Extensions>
+</InLine>
+</Ad>
+</VAST>

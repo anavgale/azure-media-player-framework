@@ -211,7 +211,7 @@ PLAYER_SEQUENCER.theAdResolver = (function () {
                 }
                 // CDATA text
                 for (contentIndex = 0; contentIndex < eltNode.childNodes.length; contentIndex += 1) {
-                    if (CDATASection.prototype.isPrototypeOf(eltNode.childNodes[contentIndex])) {
+                    if (eltNode.childNodes[contentIndex].nodeName === "#cdata-section") {
                         resultObj.value = eltNode.childNodes[contentIndex].nodeValue;
                         break;
                     }
@@ -299,7 +299,7 @@ PLAYER_SEQUENCER.theAdResolver = (function () {
                             nodeObj.elements = childElements;
                         } else {
                             for (contentIndex = 0; contentIndex < docNodeChild.childNodes.length; contentIndex += 1) {
-                                if (CDATASection.prototype.isPrototypeOf(docNodeChild.childNodes[contentIndex])) {
+                                if (docNodeChild.childNodes[contentIndex].nodeName === "#cdata-section") {
                                     nodeObj.value = docNodeChild.childNodes[contentIndex].nodeValue;
                                     break;
                                 }

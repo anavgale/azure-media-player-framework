@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Windows Azure Media Player Framework HTML5 Sample</title>
+    <script src="../../Library/Logging.js"></script>
+    <script>
+        PLAYER_SEQUENCER_TEST_LIBRARY.logBook.setLoggingLevel(PLAYER_SEQUENCER_TEST_LIBRARY.logBook.eLevel.eInfo);
+        PLAYER_SEQUENCER_TEST_LIBRARY.logBook.setLoggingType(PLAYER_SEQUENCER_TEST_LIBRARY.logBook.eType.eDump, 200);
+    </script>
+
+    <script src="../../../Core/Scheduler/Scheduler.js"></script>
+    <script src="../../../Core/Sequencer/Sequencer.js"></script>
+    <script src="../../../Core/AdResolver/AdResolver.js"></script>
+
+    <script src="PlayerTest.js"></script>
+    <script src="PlayerApp.js"></script>
+    <style>
+        .videoWindow
+        {
+            position:relative;
+            width:648px;
+            height:368px;
+            border:1px solid black;
+        }
+        .videoElts
+        {
+            position:absolute;
+            left:4px;
+            top:4px;
+            width:640px;
+            height:360px;
+        }
+        .transportCtrl
+        {
+            position:absolute;
+            left:16px;
+            top:20px;
+        }
+        .transportButton
+        {
+            width:84px;
+            height:40px
+        }
+        #statusTable
+        {
+        font-family:"Trebuchet MS", Arial, Helvetica, sans-serif;
+        width:650px;
+        border-collapse:collapse;
+        }
+        #statusTable td, #statusTable th 
+        {
+        font-size:1.0em;
+        border:1px solid #98bf21;
+        padding:3px 7px 2px 7px;
+        }
+        #statusTable tr.main 
+        {
+        color:#000;
+        background-color:#D3F2EA;
+        }
+        #statusTable tr.alt td 
+        {
+        color:#000;
+        background-color:#EAF2D3;
+        }
+        #statusTable tr.err 
+        {
+        color:#000;
+        background-color:#F2EAD3;
+        }
+    </style>
+</head>
+<body>
+    <h2>Windows Azure Media Player Framework HTML5 Sample</h2>
+    <div class="videoWindow">
+        <video class="videoElts" id="myVideoElementAd" src="" preload="auto">
+        Your browser does not support the <code>video</code> element.
+        </video>
+        <video class="videoElts" id="myVideoElementMain" src="" preload="auto">
+        Your browser does not support the <code>video</code> element.
+        </video>
+    	<!-- Note: the HTML tag id's that follow are referenced from PlayerApp.js -->
+        <div class="transportCtrl">
+            <INPUT id="playPauseButton"  class="transportButton" type="button" value="Play"      LANGUAGE="javascript" onclick="PLAYER_APP.playPauseButton()"> 
+            <INPUT id="skipFwd30Button"  class="transportButton" type="button" value="Skip +30s" LANGUAGE="javascript" onclick="PLAYER_APP.skipButton(30)" disabled="true"> 
+            <INPUT id="skipBack7Button"  class="transportButton" type="button" value="Skip -7s"  LANGUAGE="javascript" onclick="PLAYER_APP.skipButton(-7)" disabled="true"> 
+            <INPUT id="playAdNowButton"  class="transportButton" type="button" value="Ad NOW"    LANGUAGE="javascript" onclick="PLAYER_APP.playAdButton()" disabled="true"> 
+            <INPUT id="playAdSoonButton" class="transportButton" type="button" value="Ad +5s"    LANGUAGE="javascript" onclick="PLAYER_APP.playAdButton(5)" disabled="true"> 
+            <INPUT id="stopButton"       class="transportButton" type="button" value="STOP"      LANGUAGE="javascript" onclick="PLAYER_APP.stopButton()"> 
+            <INPUT id="restartButton"    class="transportButton" type="button" value="Restart"   LANGUAGE="javascript" onclick="PLAYER_APP.restartButton()" disabled="true"> 
+        </div>
+    </div>
+
+    <table id="statusTable">
+        <tr class="main">
+            <td style="width:50%">video currentTime: <span id="currentTimeMsg">??</span></td>
+            <td>video duration: <span id="durationMsg">??</span></td>
+        </tr>
+        <tr class="alt">
+            <td>seekbar position: <span id="seekbarCurrent"></span></td>
+            <td>max seek: <span id="seekbarMaxClip"></span></td>
+        </tr>
+        <tr class="main">
+            <td colspan="2">buffered: <span id="bufferedMsg">none</span></td>
+        </tr>
+        <tr class="alt">
+            <td colspan="2">seekable: <span id="seekableMsg">none</span></td>
+        </tr>
+        <tr class="err">
+            <td colspan="2">error: <span id="errorMsg"></span></td>
+        </tr>
+    </table>
+    <br>
+    <div>
+        <INPUT id="dumpLogButton"    type="button" value="Dump log"  LANGUAGE="javascript" style="width:100px;height:50px" onclick="PLAYER_APP.dumpLogButton()"> 
+    </div>
+    <div>status: <span id="statusMsg"></span><div>
+    <h3>Log:</h3>
+    <font style="font-family:'Verdana';font-size:85%">
+    <span id="logDisplay"></span>
+    </font>
+
+    <!-- Script -->
+
+    <script>
+    // PLAYER_APP, PLAYER_TEST, and PLAYER_SEQUENCER_TEST_LIBRARY must already be defined. 
+    // Let linters know about them:
+    /*global PLAYER_APP, PLAYER_TEST, PLAYER_SEQUENCER_TEST_LIBRARY */
+	
+    (function(){
+        var adEntryId, mainContentURI, adContentURI;
+
+        function getDocFromURI(aURI) {
+            var errorMessage,
+                xhr = new XMLHttpRequest();
+
+            xhr.open("GET", aURI, false); // false specifies send() is synchronous
+            xhr.send();
+
+            if (xhr.status != 200) {
+                errorMessage = "XHR error! status: " + xhr.status.toString() + "; response: " + xhr.responseText;
+                throw new Error( errorMessage );
+            }
+
+            return (xhr.responseXML) ? xhr.responseXML : xhr.responseText;
+        }
+
+        try {
+            // Initialize PLAYER_APP with our video element.
+            // This will addEventListener for any events handled.
+            PLAYER_APP.initialize( document.getElementById("myVideoElementMain"), document.getElementById("myVideoElementAd") );
+
+            // Schedule content using a VAST manifest to specify the content. While this is a kluge, it allows reuse of a lot of logic.
+            PLAYER_TEST.scheduleContentFromVAST( getDocFromURI("PlayerTestContentVAST.xml") );
+
+            // Schedule ads using a VMAP manifest.
+            PLAYER_TEST.scheduleVMAP( getDocFromURI("PlayerTestVMAP.xml"), getDocFromURI );
+
+            // Set the pending ad VAST manifest
+            PLAYER_TEST.setPendingAdVAST( getDocFromURI("PlayerTestVASTPendingAd.xml") );
+
+        } catch (ex) {
+            PLAYER_SEQUENCER_TEST_LIBRARY.logBook.logException(ex);
+        }
+
+        PLAYER_SEQUENCER_TEST_LIBRARY.logBook.log('=== Sequential Playlist after scheduling ===');
+        PLAYER_SEQUENCER_TEST_LIBRARY.logBook.log(PLAYER_SEQUENCER.sequentialPlaylist.testProbe_toJSON());
+        document.getElementById("logDisplay").innerHTML = PLAYER_SEQUENCER_TEST_LIBRARY.logBook.dumpHTML();
+        PLAYER_SEQUENCER_TEST_LIBRARY.logBook.onFinished();
+
+        PLAYER_APP.startFromBeginning();
+    }());
+    </script>
+</body>
+</html>
