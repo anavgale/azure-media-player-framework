@@ -215,7 +215,7 @@
         }
         
         //Schedule Pre Roll Ad
-        NSString *adURLString = @"http://smoothstreamingdemo.blob.core.windows.net/videoasset/WA-BumpShort_120530-1.mp4";
+        NSString *adURLString = @"https://portalvhdsq3m25bf47d15c.blob.core.windows.net/asset-42ff4d13-3cbc-45c4-b8ff-913da9fccef2/IntroToMediaServices.mp4?st=2013-01-21T23%3A16%3A26Z&se=2015-01-21T23%3A16%3A26Z&sr=c&si=bb17ebff-d6eb-4098-a320-0336b83989ba&sig=pwgT%2FUl34hwEDIMWd%2FNxLcRNQ8RUEDORSQVbQiCLSyI%3D";
         AdInfo *adInfo = [[[AdInfo alloc] init] autorelease];
         adInfo.clipURL = [NSURL URLWithString:adURLString];
         adInfo.mediaTime = [[[MediaTime alloc] init] autorelease];
@@ -467,7 +467,7 @@
         return;
     }
     
-    NSString *adURLString = @"http://smoothstreamingdemo.blob.core.windows.net/videoasset/WA-BumpShort_120530-1.mp4";
+    NSString *adURLString = @"https://portalvhdsq3m25bf47d15c.blob.core.windows.net/asset-42ff4d13-3cbc-45c4-b8ff-913da9fccef2/IntroToMediaServices.mp4?st=2013-01-21T23%3A16%3A26Z&se=2015-01-21T23%3A16%3A26Z&sr=c&si=bb17ebff-d6eb-4098-a320-0336b83989ba&sig=pwgT%2FUl34hwEDIMWd%2FNxLcRNQ8RUEDORSQVbQiCLSyI%3D";
     AdInfo *adInfo = [[[AdInfo alloc] init] autorelease];
     adInfo.clipURL = [NSURL URLWithString:adURLString];
     adInfo.mediaTime = [[[MediaTime alloc] init] autorelease];
