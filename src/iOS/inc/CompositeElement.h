@@ -13,37 +13,22 @@
 // FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 //
 
-#import "PlaylistEntry.h"
-#import "Trace.h"
+#import <Foundation/Foundation.h>
 
-@implementation PlaylistEntry
-
-#pragma mark -
-#pragma mark Properties:
-
-@synthesize type;
-@synthesize entryId;
-@synthesize originalId;
-@synthesize linearTime;
-@synthesize clipURI;
-@synthesize mediaTime;
-@synthesize isAdvertisement;
-@synthesize deleteAfterPlayed;
-@synthesize playbackPolicy;
-
-#pragma mark -
-#pragma mark Destructor:
-
-- (void) dealloc
+@interface CompositeElement : NSObject
 {
-    SEQUENCER_LOG(@"PlaylistEntry dealloc called.");
-    
-    [linearTime release];
-    [clipURI release];
-    [mediaTime release];
-    [playbackPolicy release];
-    
-    [super dealloc];
+@private
+    NSString *name;
+    BOOL expanded;
+    int32_t elementCount;
+    NSArray *elementList;
+    NSDictionary *attrs;
 }
+
+@property(nonatomic, retain) NSString *name;
+@property(nonatomic, assign) BOOL expanded;
+@property(nonatomic, assign) int32_t elementCount;
+@property(nonatomic, retain) NSArray *elementList;
+@property(nonatomic, retain) NSDictionary *attrs;
 
 @end

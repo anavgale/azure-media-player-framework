@@ -13,59 +13,27 @@
 // FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 //
 
-#import "PlaybackSegment_Internal.h"
+#import "VideoClick.h"
 #import "Trace.h"
 
-@implementation PlaybackSegment
+@implementation VideoClick
 
 #pragma mark -
 #pragma mark Properties:
 
-@synthesize clip;
-@synthesize initialPlaybackTime;
-@synthesize initialPlaybackRate;
-@synthesize segmentId;
-@synthesize error;
-@synthesize status;
-
-#pragma mark -
-#pragma mark Internal Properties:
-
-// viewIndex property.
-//
-// getter method of the viewIndex property.
-//
-// Arguments:   none.
-//
-// Returns:
-// The value of viewIndex.
-//
-- (int32_t) viewIndex
-{
-    return (viewIndex);
-}
-
-// setter method of the viewIndex property.
-//
-// Arguments:
-// [newViewIndex]   int32_t to be set.
-//
-// Returns: none.
-//
-- (void) setViewIndex:(int32_t)newViewIndex
-{
-    viewIndex = newViewIndex;
-}
+@synthesize type;
+@synthesize uriString;
+@synthesize idString;
 
 #pragma mark -
 #pragma mark Destructor:
 
 - (void) dealloc
 {
-    SEQUENCER_LOG(@"PlaybackSegment dealloc called.");
+    SEQUENCER_LOG(@"VideoClick dealloc called.");
     
-    [clip release];
-    [error release];
+    [uriString release];
+    [idString release];
     
     [super dealloc];
 }

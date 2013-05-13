@@ -13,37 +13,25 @@
 // FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 //
 
-#import "PlaylistEntry.h"
-#import "Trace.h"
+#import <Foundation/Foundation.h>
 
-@implementation PlaylistEntry
-
-#pragma mark -
-#pragma mark Properties:
-
-@synthesize type;
-@synthesize entryId;
-@synthesize originalId;
-@synthesize linearTime;
-@synthesize clipURI;
-@synthesize mediaTime;
-@synthesize isAdvertisement;
-@synthesize deleteAfterPlayed;
-@synthesize playbackPolicy;
-
-#pragma mark -
-#pragma mark Destructor:
-
-- (void) dealloc
+typedef enum
 {
-    SEQUENCER_LOG(@"PlaylistEntry dealloc called.");
-    
-    [linearTime release];
-    [clipURI release];
-    [mediaTime release];
-    [playbackPolicy release];
-    
-    [super dealloc];
+    ClickThrough,
+    ClickTracking,
+    CustomClick
+} VASTVideoClickType;
+
+@interface VideoClick : NSObject
+{
+@private
+    VASTVideoClickType type;
+    NSString *uriString;
+    NSString *idString;
 }
+
+@property(nonatomic, assign) VASTVideoClickType type;
+@property(nonatomic, retain) NSString *uriString;
+@property(nonatomic, retain) NSString *idString;
 
 @end

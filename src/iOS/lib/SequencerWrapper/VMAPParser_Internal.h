@@ -13,37 +13,11 @@
 // FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 //
 
-#import "PlaylistEntry.h"
-#import "Trace.h"
+#import "VMAPParser.h"
 
-@implementation PlaylistEntry
+@interface VMAPParser(_internal)
 
-#pragma mark -
-#pragma mark Properties:
-
-@synthesize type;
-@synthesize entryId;
-@synthesize originalId;
-@synthesize linearTime;
-@synthesize clipURI;
-@synthesize mediaTime;
-@synthesize isAdvertisement;
-@synthesize deleteAfterPlayed;
-@synthesize playbackPolicy;
-
-#pragma mark -
-#pragma mark Destructor:
-
-- (void) dealloc
-{
-    SEQUENCER_LOG(@"PlaylistEntry dealloc called.");
-    
-    [linearTime release];
-    [clipURI release];
-    [mediaTime release];
-    [playbackPolicy release];
-    
-    [super dealloc];
-}
+- (id) initWithUIWebView:(UIWebView *)aWebView;
 
 @end
+

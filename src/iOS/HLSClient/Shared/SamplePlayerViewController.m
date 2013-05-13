@@ -19,9 +19,15 @@
 #import <MediaTime.h>
 #import <SeekbarTime.h>
 #import <Scheduler.h>
+#import <AdResolver.h>
+#import <MediaFile.h>
 
 #define SKIP_FORWARD_SECONDS 60
 #define SKIP_BACKWARD_SECONDS 60
+
+NSString * const MIME_TYPE_HLS1 = @"application/x-mpegURL";
+NSString * const MIME_TYPE_HLS2 = @"application/vnd.apple.mpegURL";
+NSString * const MIME_TYPE_MP4 = @"video/mp4";
 
 @implementation SamplePlayerViewController
 
@@ -110,6 +116,9 @@
 {
     if (!hasStarted)
     {
+        // Clear download cache to get the latest content
+        [[NSURLCache sharedURLCache] removeAllCachedResponses];
+
         // Schedule the main content
         MediaTime *mediaTime = [[[MediaTime alloc] init] autorelease];
         mediaTime.currentPlaybackPosition = 0;
@@ -122,6 +131,12 @@
             [self logFrameworkError];
         }
         
+        //
+        //Uncomment following section(s) to try Ad scheduling examples.
+        //
+        
+        /*
+        //Example:1 How to use RCE.
         NSString *secondContent=@"http://wamsblureg001orig-hs.cloudapp.net/6651424c-a9d1-419b-895c-6993f0f48a26/The%20making%20of%20Microsoft%20Surface-m3u8-aapl.ism/Manifest(format=m3u8-aapl)";
         mediaTime.currentPlaybackPosition = 0;
         mediaTime.clipBeginMediaTime = 0;
@@ -129,11 +144,80 @@
         if (![framework appendContentClip:[NSURL URLWithString:secondContent] withMediaTime:mediaTime andGetClipId:&clipId])
         {
             [self logFrameworkError];
+        }*/
+
+        NSString *manifest = nil;
+        
+        /* 
+        //Example:2 How to schedule an Ad using VMAP.
+        //
+        //First download the VMAP manifest
+        
+        if (![framework.adResolver downloadManifest:&manifest withURL:[NSURL URLWithString:@"http://portalvhdsq3m25bf47d15c.blob.core.windows.net/vast/PlayerTestVMAP.xml"]])
+        {
+            [self logFrameworkError];
         }
-        
-        
+        else
+        {
+            // Schedule a list of ads using the downloaded VMAP manifest
+            if (![framework scheduleVMAPWithManifest:manifest])
+            {
+                [self logFrameworkError];
+            }
+            
+        }*/
         
         LinearTime *adLinearTime = [[[LinearTime alloc] init] autorelease];
+        int32_t adIndex;
+        
+        /*
+        //Example:3 How to schedule a late binding VAST ad.
+        
+        adLinearTime.startTime = 13;
+        adLinearTime.duration = 0;
+        
+        NSString *vastAd1=@"http://portalvhdsq3m25bf47d15c.blob.core.windows.net/vast/PlayerTestVAST.xml";
+        AdInfo *vastAdInfo1 = [[[AdInfo alloc] init] autorelease];
+        vastAdInfo1.clipURL = [NSURL URLWithString:vastAd1];
+        vastAdInfo1.mediaTime = [[[MediaTime alloc] init] autorelease];
+        vastAdInfo1.mediaTime.clipBeginMediaTime = 0;
+        vastAdInfo1.mediaTime.clipEndMediaTime = 10;
+        vastAdInfo1.policy = [[[PlaybackPolicy alloc] init] autorelease];
+        vastAdInfo1.type = AdType_Midroll;
+        vastAdInfo1.appendTo=-1;
+        adIndex = 0;
+        if (![framework scheduleClip:vastAdInfo1 atTime:adLinearTime forType:PlaylistEntryType_VAST andGetClipId:&adIndex])
+        {
+            [self logFrameworkError];
+        }
+        */
+       
+        /*
+        //Example:4 Schedule an early binding VAST ad
+        //Download the manifest first
+        if (![framework.adResolver downloadManifest:&manifest withURL:[NSURL URLWithString:@"http://portalvhdsq3m25bf47d15c.blob.core.windows.net/vast/PlayerTestVAST.xml"]])
+        {
+            [self logFrameworkError];
+        }
+        else
+        {
+            adLinearTime.startTime = 7;
+            adLinearTime.duration = 0;
+            
+            AdInfo *vastAdInfo2 = [[[AdInfo alloc] init] autorelease];
+            vastAdInfo2.mediaTime = [[[MediaTime alloc] init] autorelease];
+            vastAdInfo2.policy = [[[PlaybackPolicy alloc] init] autorelease];
+            vastAdInfo2.type = AdType_Midroll;
+            vastAdInfo2.appendTo=-1;
+            if (![framework scheduleVASTClip:vastAdInfo2 withManifest:manifest atTime:adLinearTime andGetClipId:&adIndex])
+            {
+                [self logFrameworkError];
+            }
+        }
+        */
+       
+        /*
+        //Example:5 Schedule an ad Pod.
         adLinearTime.startTime = 23;
         adLinearTime.duration = 0;
         
@@ -146,7 +230,7 @@
         adpodInfo1.policy = [[[PlaybackPolicy alloc] init] autorelease];
         adpodInfo1.type = AdType_Midroll;
         adpodInfo1.appendTo=-1;
-        int32_t adIndex = 0;
+        adIndex = 0;
         if (![framework scheduleClip:adpodInfo1 atTime:adLinearTime forType:PlaylistEntryType_Media andGetClipId:&adIndex])
         {
             [self logFrameworkError];
@@ -165,7 +249,9 @@
         {
             [self logFrameworkError];
         }
+        */
         
+        //Example:6 Schedule a single non sticky mid roll Ad 
         NSString *oneTimeAd=@"http://wamsblureg001orig-hs.cloudapp.net/5389c0c5-340f-48d7-90bc-0aab664e5f02/Windows%208_%20You%20and%20Me%20Together-m3u8-aapl.ism/Manifest(format=m3u8-aapl)";
         AdInfo *oneTimeInfo = [[[AdInfo alloc] init] autorelease];
         oneTimeInfo.clipURL = [NSURL URLWithString:oneTimeAd];
@@ -182,6 +268,7 @@
             [self logFrameworkError];
         }
         
+        //Example:7 Schedule a single sticky mid roll Ad
         NSString *stickyAd=@"http://wamsblureg001orig-hs.cloudapp.net/2e4e7d1f-b72a-4994-a406-810c796fc4fc/The%20Surface%20Movement-m3u8-aapl.ism/Manifest(format=m3u8-aapl)";
         AdInfo *stickyAdInfo = [[[AdInfo alloc] init] autorelease];
         stickyAdInfo.clipURL = [NSURL URLWithString:stickyAd];
@@ -199,7 +286,7 @@
             [self logFrameworkError];
         }
         
-        //Schedule Post Roll Ad
+        //Example:8 Schedule Post Roll Ad
         NSString *postAdURLString=@"http://wamsblureg001orig-hs.cloudapp.net/aa152d7f-3c54-487b-ba07-a58e0e33280b/wp-m3u8-aapl.ism/Manifest(format=m3u8-aapl)";
         AdInfo *postAdInfo = [[[AdInfo alloc] init] autorelease];
         postAdInfo.clipURL = [NSURL URLWithString:postAdURLString];
@@ -214,14 +301,14 @@
             [self logFrameworkError];
         }
         
-        //Schedule Pre Roll Ad
-        NSString *adURLString = @"https://portalvhdsq3m25bf47d15c.blob.core.windows.net/asset-42ff4d13-3cbc-45c4-b8ff-913da9fccef2/IntroToMediaServices.mp4?st=2013-01-21T23%3A16%3A26Z&se=2015-01-21T23%3A16%3A26Z&sr=c&si=bb17ebff-d6eb-4098-a320-0336b83989ba&sig=pwgT%2FUl34hwEDIMWd%2FNxLcRNQ8RUEDORSQVbQiCLSyI%3D";
+        //Example:9 Schedule Pre Roll Ad
+        NSString *adURLString = @"https://htmlsamples.blob.core.windows.net/asset-197e2747-49e7-49d2-b7fa-26b5dbc781aa/Switch%20to%20the%20Nokia%20Lumia%20920%20Windows%20Phone%20-%20Engadget%20Reader's%20Choice%20Smartphone%20of%20the%20Year..mp4?sv=2012-02-12&st=2013-05-10T19%3A38%3A53Z&se=2015-05-10T19%3A38%3A53Z&sr=c&si=83083fbf-0989-40e9-929e-5da76adddc20&sig=pVtzTXvIyh1DKcJ63c6y%2FPpEDp8dQbVQZvpfIL8I0%2Bs%3D";
         AdInfo *adInfo = [[[AdInfo alloc] init] autorelease];
         adInfo.clipURL = [NSURL URLWithString:adURLString];
         adInfo.mediaTime = [[[MediaTime alloc] init] autorelease];
         adInfo.mediaTime.currentPlaybackPosition = 0;
-        adInfo.mediaTime.clipBeginMediaTime = 0;
-        adInfo.mediaTime.clipEndMediaTime = 5;
+        adInfo.mediaTime.clipBeginMediaTime = 40; //You could play a portion of an Ad. Yeh!
+        adInfo.mediaTime.clipEndMediaTime = 59;
         adInfo.policy = [[[PlaybackPolicy alloc] init] autorelease];
         adInfo.appendTo = -1;
         adInfo.type = AdType_Preroll;
@@ -602,8 +689,6 @@
                       [self stringFromNSTimeInterval:args.seekbarTime.maxSeekbarPosition]];
     
     [seekbarViewController updateTime:time];
-    
-    
     [seekbarViewController updateStatus:[NSString stringWithFormat:@"%@", stateText]];
     
     // Work around a known Apple issue where playback can pause if the bandwidth drops below
@@ -659,6 +744,30 @@
 }
 
 //
+// Notification callback when a VAST/VMAP manifest is downloaded
+//
+// Arguments:
+// [notification]  An NSNotification object.
+//
+// Returns: none.
+//
+- (void) manifestDownloadedNotification:(NSNotification *)notification
+{
+    NSLog(@"Inside manifestDownloadedNotification callback ...");
+    
+    NSDictionary *userInfo = [notification userInfo];
+    ManifestDownloadedEventArgs *args = (ManifestDownloadedEventArgs *)[userInfo objectForKey:ManifestDownloadedArgsUserInfoKey];
+    if (nil == args.error)
+    {
+        NSLog(@"Successfully downloaded the following xml manifest: %@", args.manifest);
+    }
+    else
+    {
+        NSLog(@"Error with domain name:%@, description:%@ and reason:%@", args.error.domain, args.error.localizedDescription, args.error.localizedFailureReason);
+    }    
+}
+
+//
 // Do additional setup after a view is loaded from a nib resource.
 //
 // Arguments:   none.
@@ -682,8 +791,6 @@
     
     [urlList addObject:@"http://wamsblureg001orig-hs.cloudapp.net/53bd66eb-8cba-43a8-99d2-1a2a47289fb4/The%20Making%20of%20Touch%20Cover%20for%20Surface-m3u8-aapl.ism/Manifest(format=m3u8-aapl)"];
     [urlList addObject:@"http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8"];
-    [urlList addObject:@"http://nimbuspartnerorigin.cloudapp.net/da4116e4-f94d-4162-bd0f-418b598cc2b7/Contoso_690844c5-99ee-4d2a-ad61-781d288d9669-m3u8-aapl.ism/Manifest(format=m3u8-aapl)"];
-    [urlList addObject:@"http://nimbuspartnerorigin.cloudapp.net/8260c015-abfb-4c8d-8c3a-689b1448e279/Contoso_93d705de-fe6b-4430-b0ab-4c291665b610-m3u8-aapl.ism/Manifest(format=m3u8-aapl)"];
     
     currURL = 0;
     
@@ -709,13 +816,17 @@
     [self.view addSubview:seekbarViewController.view];
     
     framework = [[SequencerAVPlayerFramework alloc] initWithView:playerView];
+    framework.appDelegate = self;
     isReady = NO;
 
     // Register for framework ready notification
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(playerSequencerReadyNotification:) name:PlayerSequencerReadyNotification object:framework];
-    
+
+    // Register for manifest download notification
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(manifestDownloadedNotification:) name:ManifestDownloadedNotification object:framework.adResolver];
+
     currentPlaybackRate = 1.0;
-    currentEntry = nil;
+    currentEntry = nil;    
 }
 
 //
@@ -734,6 +845,46 @@
            interfaceOrientation == UIInterfaceOrientationLandscapeRight;
 }
 
+//
+// Select one media file to play based on a list alternative media files
+//
+// Arguments:
+// [mediaFilesList] The list of alternative media files to select from.
+//
+// Returns:
+// The media file that is selected. nil return indicates failure to select a file to play.
+//
+- (MediaFile *) selectMediaFile:(NSArray *)mediaFilesList
+{
+    MediaFile *mediaFile = nil;
+    
+    // pick the first HLS type media file. If there is no HLS content then pick the first MP4 file.
+    for (MediaFile *file in mediaFilesList)
+    {
+        if ([file.type isEqualToString:MIME_TYPE_HLS1] || [file.type isEqualToString:MIME_TYPE_HLS2])
+        {
+            mediaFile = file;
+            break;
+        }
+        
+        if (nil == mediaFile && [file.type isEqualToString:MIME_TYPE_MP4])
+        {
+            mediaFile = file;
+        }
+    }
+    
+    if (nil != mediaFile)
+    {
+        NSLog(@"In the app delegate choosing the media file to play with url:%@", mediaFile.uriString);
+    }
+    else
+    {
+        NSLog(@"In the app delegate there is no playable file found in the media file list");        
+    }
+    
+    return mediaFile;
+}
+
 #pragma mark -
 #pragma mark Destructor:
 
@@ -741,6 +892,9 @@
 {
     if (nil != framework)
     {
+        // Unregister for manifest downloaded notification
+        [[NSNotificationCenter defaultCenter] removeObserver:self name:ManifestDownloadedNotification object:framework.adResolver];
+        
         // Unregister for ready notification
         [[NSNotificationCenter defaultCenter] removeObserver:self name:PlayerSequencerReadyNotification object:framework];
     }

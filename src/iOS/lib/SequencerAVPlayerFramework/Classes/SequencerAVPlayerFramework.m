@@ -17,9 +17,18 @@
 #import "SequencerAVPlayerFramework_Internal.h"
 #import "Sequencer.h"
 #import "Scheduler.h"
+#import "AdResolver.h"
+#import "VASTParser.h"
+#import "VMAPParser.h"
 #import "SeekbarTime.h"
 #import "PlaybackSegment_Internal.h"
 #import "AVPlayerLayerView.h"
+#import "Creative.h"
+#import "MediaFile.h"
+#import "AdBreak.h"
+#import "TrackingEvent.h"
+#import "VMAPExtension.h"
+#import "AdSource.h"
 
 #define SEEKBAR_TIMER_INTERVAL 0.2
 #define TIMER_INTERVALS_PER_NOTIFICATION 5
@@ -88,6 +97,7 @@ NSString *kStatusKey = @"status";
 @synthesize player;
 @synthesize rate;
 @synthesize lastError;
+@synthesize appDelegate;
 
 #pragma mark -
 #pragma mark Private instance methods:
@@ -194,6 +204,247 @@ NSString *kStatusKey = @"status";
     self.player = nil;
 }
 
+- (BOOL) getAdInfos:(NSMutableArray **)adInfos fromVASTEntry:(int32_t)vastEntryId
+{
+    BOOL success = NO;
+    AdInfo *adBuffetAd = nil;
+    
+    do
+    {
+        if (nil == sequencer || nil == sequencer.scheduler || nil == sequencer.adResolver)
+        {
+            [self setNULLSequencerSchedulerError];
+            break;
+        }
+
+        NSMutableArray *adList = nil;
+        success = [self.adResolver.vastParser getAdList:&adList withEntryId:vastEntryId];
+        if (!success)
+        {
+            FRAMEWORK_LOG(@"Failed to retrieve the Ad list from the VAST manifest");
+            self.lastError = self.adResolver.vastParser.lastError;
+            break;
+        }
+        
+        *adInfos = [[NSMutableArray alloc] initWithCapacity:[adList count]];
+        adBuffetAd = nil;
+        
+        for (int32_t adIndex = 0; adIndex < [adList count]; ++adIndex)
+        {
+            Ad *ad = [adList objectAtIndex:adIndex];
+            NSMutableArray *creativesList = nil;
+            NSMutableArray *mediaFileList = nil;
+            switch (ad.type)
+            {
+                case InLine:
+                    if (![self.adResolver.vastParser getCreativeList:&creativesList withEntryId:vastEntryId adOrdinal:adIndex adType:ad.type])
+                    {
+                        FRAMEWORK_LOG(@"Failed to retrieve the creative list for ad %d", adIndex);
+                        self.lastError = self.adResolver.vastParser.lastError;
+                        [self sendErrorNotification];
+                        continue;
+                    }
+                    
+                    for (int32_t creativeIndex = 0; creativeIndex < [creativesList count]; ++creativeIndex)
+                    {
+                        // Only deal with Linear Creative
+                        Creative *creative = [creativesList objectAtIndex:creativeIndex];
+                        if (Linear == creative.type)
+                        {
+                            if (![self.adResolver.vastParser getMediaFileList:&mediaFileList withEntryId:vastEntryId adOrdinal:adIndex creativeOrdinal:creativeIndex])
+                            {
+                                FRAMEWORK_LOG(@"Failed to retrieve the media file list for ad %d and creative %d", adIndex, creativeIndex);
+                                self.lastError = self.adResolver.vastParser.lastError;
+                                [self sendErrorNotification];
+                                continue;
+                            }
+                        }
+                        if (0 == creative.duration)
+                        {
+                            FRAMEWORK_LOG(@"VAST Linear creative without Duration element! Ad %d Creative %d", adIndex, creativeIndex);
+                            self.lastError = self.adResolver.vastParser.lastError;
+                            [self sendErrorNotification];
+                            continue;
+                        }
+                        
+                        // Ask the delegate for media file selection
+                        MediaFile *mediaFile = nil;
+                        if (nil != appDelegate && [appDelegate respondsToSelector:@selector(selectMediaFile:)])
+                        {
+                            mediaFile = [appDelegate selectMediaFile:mediaFileList];
+                        }
+                        
+                        // If there is no delegate or the delegate didn't make a selection, the default selection is the first ad
+                        if (nil == mediaFile)
+                        {
+                            mediaFile = [mediaFileList objectAtIndex:0];
+                        }
+                        
+                        AdInfo *adInfo = [[AdInfo alloc] init];
+                        adInfo.clipURL = [NSURL URLWithString:mediaFile.uriString];
+                        adInfo.mediaTime = [[[MediaTime alloc] init] autorelease];
+                        adInfo.mediaTime.clipBeginMediaTime = 0;
+                        adInfo.mediaTime.clipEndMediaTime = creative.duration;
+                        
+                        if (-1 == ad.sequence)
+                        {
+                            // This is a buffet ad
+                            if (nil == adBuffetAd)
+                            {
+                                adBuffetAd = [adInfo retain];
+                            }
+                        }
+                        else
+                        {
+                            // This ad belongs to an ad pod
+                            [*adInfos addObject:adInfo];
+                        }
+                        
+                        [adInfo release];
+                    }
+                    
+                    break;
+                    
+                case Wrapper:
+                    FRAMEWORK_LOG(@"VAST Wrapper manifest is not implemented!");
+                    break;
+                    
+                default:
+                    FRAMEWORK_LOG(@"Unrecognized VAST manifest type:%u ", ad.type);
+                    break;
+            }
+        }
+        
+        if (0 == [*adInfos count])
+        {
+            if (nil != adBuffetAd)
+            {
+                [*adInfos addObject:adBuffetAd];
+                [adBuffetAd release];
+            }
+        }
+        
+        if (0 == [*adInfos count])
+        {
+            [self setNULLSequencerSchedulerError];
+            break;
+        }
+
+        success = YES;
+    }
+    while (NO);
+    
+    return success;
+}
+
+- (BOOL) getAdInfos:(NSMutableArray **)adInfos fromVAST:(NSString *)vastManifest
+{
+    BOOL success = NO;
+    
+    do
+    {
+        if (nil == sequencer || nil == sequencer.scheduler || nil == sequencer.adResolver)
+        {
+            [self setNULLSequencerSchedulerError];
+            break;
+        }
+        
+        int32_t vastEntryId = 0;
+        success = [self.adResolver.vastParser createEntry:&vastEntryId withManifest:vastManifest];
+        if (!success)
+        {
+            FRAMEWORK_LOG(@"Failed to create the VAST entry");
+            self.lastError = self.adResolver.vastParser.lastError;
+            break;
+        }
+        
+        success = [self getAdInfos:adInfos fromVASTEntry:vastEntryId];
+        if (!success)
+        {
+            FRAMEWORK_LOG(@"Failed to get the ad info from the VAST entry");
+        }
+                
+        // Ignore error when release the entry
+        [self.adResolver releaseEntry:vastEntryId];        
+    }
+    while (NO);
+        
+    return success;    
+}
+
+- (BOOL) scheduleAds:(NSMutableArray *)adInfos withTotalDuration:(NSTimeInterval)totalDuration atTime:(LinearTime *)linearTime basedOnAd:(AdInfo *)baseAd andGetClipId:(int32_t *)clipId
+{
+    BOOL success = NO;
+    
+    do
+    {
+        NSArray *sortedArray = [adInfos sortedArrayUsingComparator:^NSComparisonResult(id a, id b) {
+            AdInfo *firstAd = (AdInfo *)a;
+            AdInfo *secondAd = (AdInfo *)b;
+            if (firstAd.appendTo < secondAd.appendTo)
+            {
+                return NSOrderedAscending;
+            }
+            else if (firstAd.appendTo > secondAd.appendTo)
+            {
+                return NSOrderedDescending;
+            }
+            else
+            {
+                return NSOrderedSame;
+            }
+        }];
+        
+        // schedule the first ad in the pod
+        int32_t entryId;
+        AdInfo *ad = nil;
+
+        // Schedule all the ads in the pod
+        for (int32_t adIndex = 0; adIndex < [sortedArray count] && 0 < totalDuration; ++adIndex)
+        {
+            ad = (AdInfo *)[sortedArray objectAtIndex:adIndex];
+            NSTimeInterval adDuration = ad.mediaTime.clipEndMediaTime - ad.mediaTime.clipBeginMediaTime;
+            
+            if (totalDuration < adDuration)
+            {
+                ad.mediaTime.clipEndMediaTime = ad.mediaTime.clipBeginMediaTime + totalDuration;
+                adDuration = totalDuration;
+            }
+            
+            totalDuration -= adDuration;
+            
+            if (0 == adIndex)
+            {
+                ad.type = baseAd.type;
+                ad.appendTo = baseAd.appendTo;                
+            }
+            else
+            {
+                ad.type = AdType_Pod;
+                ad.appendTo = entryId;
+            }
+            
+            ad.policy = baseAd.policy;
+            ad.deleteAfterPlayed = baseAd.deleteAfterPlayed;
+                        
+            success = [sequencer.scheduler scheduleClip:ad atTime:linearTime forType:PlaylistEntryType_Media andGetClipId:&entryId];
+            if (!success)
+            {
+                self.lastError = sequencer.scheduler.lastError;
+                break;
+            }
+            
+            if (nil != clipId && 0 == adIndex)
+            {
+                *clipId = entryId;
+            }
+        }
+    }
+    while (NO);
+    
+    return success;
+}
+
 #pragma mark -
 #pragma mark Instance methods:
 
@@ -233,6 +484,7 @@ NSString *kStatusKey = @"status";
         
         // Create the sequencer chain and get the head of the chain
         sequencer = [[Sequencer alloc] init];
+
         isStopped = YES;
         resetView = NO;
         loadingTimer = [[NSTimer scheduledTimerWithTimeInterval:JAVASCRIPT_LOADING_POLLING_INTERVAL target:self selector:@selector(loadTimer:) userInfo:NULL repeats:NO] retain];
@@ -270,11 +522,27 @@ NSString *kStatusKey = @"status";
             // Check for SeekToStart segment
             self.nextSegment = nil;
             if ([sequencer getSegmentAfterSeek:&nextSegment withLinearPosition:0] && nil != nextSegment)
-            {
+            {                
                 if (![self checkSeekToStart])
                 {
                     break;
                 }
+
+                if (PlaylistEntryType_VAST == nextSegment.clip.type)
+                {
+                    if (![self getSegmentFromVASTSegment:&nextSegment whileBuffering:NO])
+                    {
+                        break;
+                    }
+                }
+                
+                // Need to check SeekToStart again since the VAST ad could be an invalid preroll ad
+                // and the last call would result in skipping to the next segment
+                if (![self checkSeekToStart])
+                {
+                    break;
+                }
+               
                 // Send notification for seek bar time update
                 [self sendPlaylistEntryChangedNotificationForCurrentEntry:nil nextEntry:nextSegment.clip atTime:0];
                 
@@ -285,7 +553,8 @@ NSString *kStatusKey = @"status";
                 AVPlayerLayerView *playerLayerView = (AVPlayerLayerView *)[avPlayerViews objectAtIndex:0];
                 playerLayerView.status = ViewStatus_Idle;
                 
-                [self playMovie:[nextSegment.clip.clipURI absoluteString]];
+                NSString *nextURL = [nextSegment.clip.clipURI absoluteString];
+                [self playMovie:nextURL];
             }
             else
             {
@@ -403,7 +672,7 @@ NSString *kStatusKey = @"status";
                         }
                         else
                         {
-                            NSLog(@"There is an error when seeking into seekTime %f", seekTime);
+                            FRAMEWORK_LOG(@"There is an error when seeking into seekTime %f", seekTime);
                         }
                     }
                      ];
@@ -415,6 +684,14 @@ NSString *kStatusKey = @"status";
                 {
                     // Seek is into another entry
                     // We need to load and play another content in a separate player
+                    if (PlaylistEntryType_VAST == segment.clip.type)
+                    {
+                        success = [self getSegmentFromVASTSegment:&segment whileBuffering:NO];
+                        if (!success)
+                        {
+                            break;
+                        }
+                    }
                     segment.status = PlayerStatus_Stopped;
                     resetView = YES;
                     self.nextSegment = segment;
@@ -491,6 +768,273 @@ NSString *kStatusKey = @"status";
 }
 
 //
+// schedule ad or ad pod based on the VAST manifest provided
+//
+// Arguments:
+// [ad] The ad clip to be scheduled (with URL and media time missing and to be filled from the VAST manifest)
+// [vastManifest]: The VAST manifest
+// [linearTime]: The time when the ad should be played in the linear timeline
+// [clipId]: The output clipId for the scheduled clip. In case of an ad pod, this is the entryId for the first clip.
+//
+// Returns: YES for success and NO for failure
+//
+- (BOOL) scheduleVASTClip:(AdInfo *)ad withManifest:(NSString *)vastManifest atTime:(LinearTime *)linearTime andGetClipId:(int32_t *)clipId
+{
+    BOOL success = NO;
+    NSMutableArray *adPodArray = nil;
+    
+    do
+    {
+        if (nil == sequencer || nil == sequencer.scheduler || nil == sequencer.adResolver)
+        {
+            [self setNULLSequencerSchedulerError];
+            break;
+        }
+        
+        success = [self getAdInfos:&adPodArray fromVAST:vastManifest];
+        if (!success)
+        {
+            FRAMEWORK_LOG(@"Failed to get ad list from the VAST manifest");
+            break;
+        }
+
+        NSTimeInterval totalDuration = 0;
+        for (AdInfo *ad in adPodArray)
+        {
+            totalDuration += (ad.mediaTime.clipEndMediaTime - ad.mediaTime.clipBeginMediaTime);
+        }
+        success = [self scheduleAds:adPodArray withTotalDuration:totalDuration atTime:linearTime basedOnAd:ad andGetClipId:clipId];
+        if (!success)
+        {
+            FRAMEWORK_LOG(@"Failed to schedule the ad list from the VAST manifest");
+            break;
+        }
+
+        success = YES;
+    }
+    while (NO);
+
+    [adPodArray removeAllObjects];
+    [adPodArray release];
+
+    return success;
+}
+
+//
+// schedule ad list based on VMAP manifest
+//
+// Arguments:
+// [vmapManifest]: The VMAP manifest
+//
+// Returns: YES for success and NO for failure
+//
+- (BOOL) scheduleVMAPWithManifest:(NSString *)vmapManifest
+{
+    BOOL success = NO;
+    
+    do
+    {
+        if (nil == sequencer || nil == sequencer.scheduler || nil == sequencer.adResolver)
+        {
+            [self setNULLSequencerSchedulerError];
+            break;
+        }
+        
+        int32_t vmapEntryId = 0;
+        success = [self.adResolver.vmapParser createEntry:&vmapEntryId withManifest:vmapManifest];
+        if (!success)
+        {
+            FRAMEWORK_LOG(@"Failed to create the VMAP entry");
+            self.lastError = self.adResolver.vmapParser.lastError;
+            break;
+        }
+        
+        NSMutableArray *adBreakList = nil;
+        success = [self.adResolver.vmapParser getAdBreakList:&adBreakList withEntryId:vmapEntryId];
+        if (!success)
+        {
+            FRAMEWORK_LOG(@"Failed to obtain the ad break list from the VMAP manifest");
+            break;
+        }
+        
+        // if any ad scheduling failed we should return failure but should finish scheduling the rest of the ads.
+        BOOL hasFailure = NO;
+        for (int32_t adBreakId = 0; adBreakId < [adBreakList count]; ++adBreakId)
+        {
+            AdBreak *adBreak = [adBreakList objectAtIndex:adBreakId];
+            
+            for (NSString *element in adBreak.elementList)
+            {
+                if ([element isEqualToString:@"AdSource"])
+                {
+                    AdSource *adSource = nil;
+                    success = [self.adResolver.vmapParser getAdSource:&adSource withEntryId:vmapEntryId adBreakOrdinal:adBreakId];
+                    if (!success)
+                    {
+                        FRAMEWORK_LOG(@"Failed to get the AdSource from the VMAP entry");
+                        self.lastError = self.adResolver.vmapParser.lastError;
+                        break;
+                    }
+                    
+                    NSString *manifest = nil;
+                    NSMutableArray *adPodArray = nil;
+                    int32_t vastEntryId = 0;
+                    LinearTime *adBreakTime = nil;
+                    AdInfo *baseAd = nil;
+                    NSTimeInterval totalDuration = 0;
+                    switch (adSource.type)
+                    {
+                        case VASTData:
+                            success = [self.adResolver.vmapParser createVASTEntryFromAdBreak:&vastEntryId withEntryId:vmapEntryId adBreakOrdinal:adBreakId];
+                            if (!success)
+                            {
+                                FRAMEWORK_LOG(@"Failed to create VAST entry for AdBreak %d", adBreakId);
+                                self.lastError = self.adResolver.vmapParser.lastError;
+                                break;
+                            }
+                            
+                            success = [self getAdInfos:&adPodArray fromVASTEntry:vastEntryId];
+                            if (!success || nil == adPodArray || 0 == [adPodArray count])
+                            {
+                                FRAMEWORK_LOG(@"Failed to parse the VAST manifest");
+                                break;
+                            }
+                            
+                            adBreakTime = [[[LinearTime alloc] init] autorelease];
+                            adBreakTime.startTime = adBreak.timeOffset;
+                            baseAd = [[[AdInfo alloc] init] autorelease];
+                            if (0 == adBreak.timeOffset)
+                            {
+                                baseAd.type = AdType_Preroll;
+                            }
+                            else if (adBreak.timeOffset < 0)
+                            {
+                                baseAd.type = AdType_Postroll;
+                            }
+                            else
+                            {
+                                baseAd.type = AdType_Midroll;
+                            }
+                            totalDuration = 0;
+                            for (AdInfo *ad in adPodArray)
+                            {
+                                totalDuration += (ad.mediaTime.clipEndMediaTime - ad.mediaTime.clipBeginMediaTime);
+                            }
+                            success = [self scheduleAds:adPodArray withTotalDuration:totalDuration atTime:adBreakTime basedOnAd:baseAd andGetClipId:nil];
+                            if (!success)
+                            {
+                                FRAMEWORK_LOG(@"Failed to schedule the rest of the ad pod specified in the VAST manifest");
+                                break;
+                            }
+                            
+                            break;
+                            
+                        case CustomAdData:
+                            FRAMEWORK_LOG(@"AdSource CustomAdData ignored!");
+                            break;
+                            
+                        case AdTagURI:
+                            // Download the vast manifest, has to be a blocking call
+                            success = [self.adResolver downloadManifest:&manifest withURL:[NSURL URLWithString:adSource.value]];
+                            if (!success)
+                            {
+                                FRAMEWORK_LOG(@"Failed to download the manifest with url:%@", adSource.value);
+                                self.lastError = self.adResolver.lastError;
+                                break;
+                            }
+                            
+                            success = [self getAdInfos:&adPodArray fromVAST:manifest];
+                            if (!success || nil == adPodArray || 0 == [adPodArray count])
+                            {
+                                FRAMEWORK_LOG(@"Failed to parse the VAST manifest in the adBreak with url %@", adSource.value);
+                                break;
+                            }
+                            
+                            adBreakTime = [[[LinearTime alloc] init] autorelease];
+                            adBreakTime.startTime = adBreak.timeOffset;
+                            baseAd = [[[AdInfo alloc] init] autorelease];
+                            if (0 == adBreak.timeOffset)
+                            {
+                                baseAd.type = AdType_Preroll;
+                            }
+                            else if (adBreak.timeOffset < 0)
+                            {
+                                baseAd.type = AdType_Postroll;
+                            }
+                            baseAd.type = AdType_Midroll;
+                            totalDuration = 0;
+                            for (AdInfo *ad in adPodArray)
+                            {
+                                totalDuration += (ad.mediaTime.clipEndMediaTime - ad.mediaTime.clipBeginMediaTime);
+                            }
+                            success = [self scheduleAds:adPodArray withTotalDuration:totalDuration atTime:adBreakTime basedOnAd:baseAd andGetClipId:nil];
+                            if (!success)
+                            {
+                                FRAMEWORK_LOG(@"Failed to schedule the ad pod specified in the VAST manifest with url %@", adSource.value);
+                                break;
+                            }
+                            
+                            break;
+                            
+                        default:
+                            FRAMEWORK_LOG(@"Unexpected AdSource type: %d", adSource.type);
+                            break;
+                    }
+                    
+                    if (!success)
+                    {
+                        hasFailure = YES;
+                        [self sendErrorNotification];
+                        break;
+                    }
+                }
+                else if ([element isEqualToString:@"TrackingEvents"])
+                {
+                    // Don't handle tracking event yet
+                    // Don't fail even when having error
+                    NSMutableArray *trackingEventList = nil;
+                    [self.adResolver.vmapParser getTrackingEventsList:&trackingEventList withEntryId:vmapEntryId adBreakOrdinal:adBreakId];
+                    
+                    FRAMEWORK_LOG(@"Ignoring Tracking events:");
+                    for (TrackingEvent *event in trackingEventList)
+                    {
+                        FRAMEWORK_LOG(@"%@\n", event);
+                    }                    
+                }
+                else if ([element isEqualToString:@"Extensions"])
+                {
+                    // Don't handle extensions yet
+                    // Don't fail even when having error
+                    NSMutableArray *extensionList = nil;
+                    [self.adResolver.vmapParser getExtensionsList:&extensionList withEntryId:vmapEntryId adBreakOrdinal:adBreakId];
+                    
+                    FRAMEWORK_LOG(@"Ignoring extensions");
+                    for (VMAPExtension *extension in extensionList)
+                    {
+                        FRAMEWORK_LOG(@"%@\n", extension);
+                    }                    
+                }
+                else
+                {
+                    FRAMEWORK_LOG(@"Unexpected AdBreak child element in AdBreak %d", adBreakId);
+                }
+            }            
+        }
+        
+        if (hasFailure)
+        {
+            success = NO;
+        }
+
+        // Ignore error when release the entry
+        [self.adResolver releaseEntry:vmapEntryId];
+    }
+    while (NO);
+
+    return success;
+}
+
+//
 // cancel a specific ad in the framework
 //
 // Arguments:
@@ -508,10 +1052,22 @@ NSString *kStatusKey = @"status";
     }
     else
     {
-        success = [sequencer.scheduler cancelClip:clipId];
-        if (!success)
+        if (clipId == currentSegment.clip.originalId)
         {
-            self.lastError = sequencer.scheduler.lastError;
+            success = [self skipCurrentPlaylistEntry];
+        }
+        
+        if (success)
+        {
+            success = [sequencer.scheduler cancelClip:clipId];
+            if (!success)
+            {
+                self.lastError = sequencer.scheduler.lastError;
+            }
+        }
+        else
+        {
+            self.lastError = sequencer.lastError;
         }
     }
     
@@ -641,7 +1197,17 @@ NSString *kStatusKey = @"status";
             }
             else
             {
-                // only need to resume the main content and no need to load
+                // for pause timeline false ad we need to do a seek here
+                if (currentSegment.clip.linearTime.duration > 0)
+                {
+                    AVPlayerLayerView *nextView = [avPlayerViews objectAtIndex:nextSegment.viewIndex];
+                    AVPlayer *moviePlayer = nextView.player;
+
+                    NSTimeInterval resumeTime = currentSegment.clip.linearTime.startTime + currentSegment.clip.linearTime.duration;
+                    CMTime targetTime = CMTimeMakeWithSeconds(resumeTime, NSEC_PER_SEC);
+                    [moviePlayer seekToTime:targetTime];
+                }
+                // otherwise only need to resume the main content and no need to load
                 nextSegment.status = PlayerStatus_Ready;
             }
         }
@@ -699,7 +1265,7 @@ NSString *kStatusKey = @"status";
 - (void) playMovie:(NSString *)url
 {
     NSURL* theUrl = [NSURL URLWithString:url];
-    NSLog(@"Playing URL: %@", theUrl);
+    FRAMEWORK_LOG(@"Playing URL: %@", theUrl);
     
     switch (nextSegment.status)
     {
@@ -736,7 +1302,7 @@ NSString *kStatusKey = @"status";
 - (void) loadMovie:(NSString *)url
 {
     NSURL* theUrl = [NSURL URLWithString:url];
-    NSLog(@"loading URL: %@", theUrl);
+    FRAMEWORK_LOG(@"loading URL: %@", theUrl);
     
     [self initPlayer:url];
     
@@ -759,11 +1325,10 @@ NSString *kStatusKey = @"status";
 //
 - (void) startPlayback
 {
-    NSLog(@"start playback");
+    FRAMEWORK_LOG(@"start playback");
     
     AVPlayerLayerView *viewToShow = nil;
     AVPlayerLayerView *viewToHide = nil;
-    double seconds = 0;
     BOOL currentlyPlaying = (nil != currentSegment);
     BOOL shouldPausePlayer = currentlyPlaying ? (!currentSegment.clip.isAdvertisement && nextSegment.clip.isAdvertisement) : NO;
     BOOL playbackShouldStart = (nil == nextSegment.error);
@@ -796,16 +1361,8 @@ NSString *kStatusKey = @"status";
     if (playbackShouldStart)
     {
         [moviePlayer play];
-        
-        // Seek the player to the correct start position
-        seconds = currentSegment.initialPlaybackTime;
-        if (ViewStatus_Paused != viewToShow.status && 0 != seconds)
-        {
-            CMTime targetTime = CMTimeMakeWithSeconds(seconds, NSEC_PER_SEC);
-            [moviePlayer seekToTime:targetTime];
-        }
-        
-        NSLog(@"Clip change: Start playback for url: %@\n", currentSegment.clip.clipURI);
+
+        FRAMEWORK_LOG(@"Clip change: Start playback for url: %@\n", currentSegment.clip.clipURI);
     }
     
     // We need to pause or delete the previous player
@@ -815,7 +1372,7 @@ NSString *kStatusKey = @"status";
         if (shouldPausePlayer)
         {
             // From main content to ad, we just need to pause the main content
-            [viewToHide.player pause];
+            [viewToHide.player pause];            
             viewToHide.status = ViewStatus_Paused;
         }
         else
@@ -849,7 +1406,7 @@ NSString *kStatusKey = @"status";
 //
 - (void) playerItemDidReachEnd:(NSNotification *)notification
 {
-    NSLog(@"Inside playback finished notification callback...");
+    FRAMEWORK_LOG(@"Inside playback finished notification callback...");
     
     [self contentFinished:NO];
 }
@@ -879,14 +1436,25 @@ NSString *kStatusKey = @"status";
             // it has not tried to load new media resources for playback 
             case AVPlayerItemStatusUnknown:
                 {
-                    NSLog(@"Status update: AVPlayerItemStatusUnknown");
+                    FRAMEWORK_LOG(@"Status update: AVPlayerItemStatusUnknown");
                 }
                 break;
                 
             case AVPlayerItemStatusReadyToPlay:
                 {
-                    NSLog(@"Status update: AVPlayerItemStatusReadyToPlay");
-                    NSLog(@"Clip change rebuffering: clip url: %@\n is ready to play", nextSegment.clip.clipURI);
+                    FRAMEWORK_LOG(@"Status update: AVPlayerItemStatusReadyToPlay");
+                    FRAMEWORK_LOG(@"Clip change rebuffering: clip url: %@\n is ready to play", nextSegment.clip.clipURI);
+
+                    // Seek the player to the correct start position
+                    AVPlayerLayerView *nextView = [avPlayerViews objectAtIndex:nextSegment.viewIndex];
+                    AVPlayer *moviePlayer = nextView.player;
+                    
+                    NSTimeInterval seconds = nextSegment.initialPlaybackTime;
+                    if (0 != seconds)
+                    {
+                        CMTime targetTime = CMTimeMakeWithSeconds(seconds, NSEC_PER_SEC);
+                        [moviePlayer seekToTime:targetTime];
+                    }
 
                     if (PlayerStatus_Loading == nextSegment.status)
                     {
@@ -903,7 +1471,7 @@ NSString *kStatusKey = @"status";
                 
             case AVPlayerItemStatusFailed:
                 {
-                    NSLog(@"Status update: AVPlayerItemStatusFailed");
+                    FRAMEWORK_LOG(@"Status update: AVPlayerItemStatusFailed");
                     
                     self.lastError = nextItem.error;
                     [self sendErrorNotification];
@@ -932,21 +1500,21 @@ NSString *kStatusKey = @"status";
                 // it has not tried to load new media resources for playback
             case AVPlayerItemStatusUnknown:
                 {
-                    NSLog(@"Status update: AVPlayerItemStatusUnknown");
+                    FRAMEWORK_LOG(@"Status update: AVPlayerItemStatusUnknown");
                 }
                 break;
                 
             case AVPlayerItemStatusReadyToPlay:
                 {
                     // This can happen when there is a seek within the same player
-                    NSLog(@"Status update: AVPlayerItemStatusReadyToPlay");
-                    NSLog(@"Clip change rebuffering: clip url: %@\n is ready to play", currentSegment.clip.clipURI);
+                    FRAMEWORK_LOG(@"Status update: AVPlayerItemStatusReadyToPlay");
+                    FRAMEWORK_LOG(@"Clip change rebuffering: clip url: %@\n is ready to play", currentSegment.clip.clipURI);
                 }
                 break;
                 
             case AVPlayerItemStatusFailed:
                 {
-                    NSLog(@"Status update: AVPlayerItemStatusFailed");
+                    FRAMEWORK_LOG(@"Status update: AVPlayerItemStatusFailed");
 
                     self.lastError = currentItem.error;
                     [self sendErrorNotification];
@@ -1003,7 +1571,8 @@ NSString *kStatusKey = @"status";
                 self.lastError = sequencer.lastError;
                 break;
             }
-            if (nil == nextSegment || nextSegment.clip.entryId != segment.clip.entryId)
+            if (nil == nextSegment ||
+                (nextSegment.clip.entryId != segment.clip.entryId && PlaylistEntryType_VAST != segment.clip.type))
             {
                 // Before releasing the preloaded segment
                 // we need to make sure that we remove observations and clear the state
@@ -1015,6 +1584,14 @@ NSString *kStatusKey = @"status";
                     nextSegment.status = PlayerStatus_Stopped;
                 }
                 
+                if (PlaylistEntryType_VAST == segment.clip.type)
+                {
+                    success = [self getSegmentFromVASTSegment:&segment whileBuffering:NO];
+                    if (!success)
+                    {
+                        break;
+                    }
+                }
                 self.nextSegment = segment;
             }
             [segment release];
@@ -1027,7 +1604,7 @@ NSString *kStatusKey = @"status";
         }
         
         if (nil != nextSegment)
-        {
+        {            
             rate = nextSegment.initialPlaybackRate;
             
             nextURL = [nextSegment.clip.clipURI absoluteString];
@@ -1035,7 +1612,7 @@ NSString *kStatusKey = @"status";
         
         if (nil == nextURL)
         {
-            NSLog(@"Playback ended");
+            FRAMEWORK_LOG(@"Playback ended");
             
             [self sendPlaylistEntryChangedNotificationForCurrentEntry:currentSegment.clip nextEntry:nil atTime:currTime];
             [self reset:moviePlayer];
@@ -1073,16 +1650,19 @@ NSString *kStatusKey = @"status";
     
     CMTime cmCurrTime = moviePlayer.currentTime;
     NSTimeInterval currTime = (double)cmCurrTime.value / cmCurrTime.timescale;
-    if (![sequencer getSegmentOnEndOfBuffering:&segment withCurrentSegment:currentSegment mediaTime:currTime currentPlaybackRate:rate])
+    
+    do
     {
-        self.lastError = sequencer.lastError;
-        [self sendErrorNotification];
-    }
-    else
-    {
+        if (![sequencer getSegmentOnEndOfBuffering:&segment withCurrentSegment:currentSegment mediaTime:currTime currentPlaybackRate:rate])
+        {
+            self.lastError = sequencer.lastError;
+            [self sendErrorNotification];
+            break;
+        }
+        
         if (PlaylistEntryType_SeekToStart == segment.clip.type)
         {
-            NSLog(@"Clip change prebuffering: SeekToStart detected");
+            FRAMEWORK_LOG(@"Clip change prebuffering: SeekToStart detected");
             
             // Try to get the next segment
             PlaybackSegment *newSegment = nil;
@@ -1090,23 +1670,37 @@ NSString *kStatusKey = @"status";
             {
                 self.lastError = sequencer.lastError;
                 [self sendErrorNotification];
+                break;
             }
-            else
-            {
-                [segment release];
-                segment = newSegment;
-            }
+            [segment release];
+            segment = newSegment;
         }
         
+        if (PlaylistEntryType_VAST == segment.clip.type)
+        {
+            FRAMEWORK_LOG(@"Clip change prebuffering: VAST entry detected");
+            
+            if (![self getSegmentFromVASTSegment:&segment whileBuffering:YES])
+            {
+                [self sendErrorNotification];
+                break;
+            }
+        }
+
         self.nextSegment = segment;
         [segment release];
         
         if (nil != nextSegment && nil != nextSegment.clip.clipURI)
         {
             nextURL = [nextSegment.clip.clipURI absoluteString];
-            [self loadMovie:nextURL];
+            
+            if (nil != nextURL)
+            {
+                [self loadMovie:nextURL];
+            }
         }
-    }
+
+    } while (NO);        
 }
 
 //
@@ -1156,7 +1750,7 @@ NSString *kStatusKey = @"status";
     
     if (PlaylistEntryType_SeekToStart == nextSegment.clip.type)
     {
-        NSLog(@"Clip change: SeekToStart detected");
+        FRAMEWORK_LOG(@"Clip change: SeekToStart detected");
         
         // Try to get the next segment
         PlaybackSegment *segment = nil;
@@ -1169,13 +1763,94 @@ NSString *kStatusKey = @"status";
         if (nil == segment)
         {
             // nothing to play
-            NSLog(@"End of playback");
+            FRAMEWORK_LOG(@"End of playback");
         }
         else
         {
             self.nextSegment = segment;
             [segment release];
         }
+    }
+    
+    return success;
+}
+
+//
+// Resolve the VAST entry to entries with content URL
+//
+// Arguments:
+// [segment]  This is an input/output parameter. For input it is the VAST segment, for output it is the first resolved segment with content URL.
+// [isBuffering]  YES if this is called during pre-buffer, NO if this is called at the content switching time.
+//
+// Returns: YES for success and NO for failure
+//
+- (BOOL) getSegmentFromVASTSegment:(PlaybackSegment **)segment whileBuffering:(BOOL)isBuffering
+{
+    BOOL success = YES;
+    NSMutableArray *adPodArray = nil;
+    NSString *vastURL = [(*segment).clip.clipURI absoluteString];
+    NSTimeInterval totalDuration = (*segment).clip.mediaTime.clipEndMediaTime - (*segment).clip.mediaTime.clipBeginMediaTime;
+
+    do {
+        // Download the vast manifest, has to be a blocking call
+        NSString *manifest = nil;
+        success = [self.adResolver downloadManifest:&manifest withURL:[NSURL URLWithString:vastURL]];
+        if (!success)
+        {
+            FRAMEWORK_LOG(@"Failed to download the manifest with url:%@", vastURL);
+            self.lastError = self.adResolver.lastError;
+            break;
+        }
+        
+        success = [self getAdInfos:&adPodArray fromVAST:manifest];
+        if (!success || nil == adPodArray || 0 == [adPodArray count])
+        {
+            FRAMEWORK_LOG(@"Failed to parse the VAST manifest");
+            break;
+        }
+        
+        AdInfo *baseAd = [[[AdInfo alloc] init] autorelease];
+        baseAd.type = AdType_Pod;
+        baseAd.appendTo = (*segment).clip.entryId;
+        baseAd.mediaTime = (*segment).clip.mediaTime;
+        baseAd.policy = (*segment).clip.playbackPolicy;
+        baseAd.clipURL = (*segment).clip.clipURI;
+        baseAd.deleteAfterPlayed = YES;
+        
+        success = [self scheduleAds:adPodArray withTotalDuration:(NSTimeInterval)totalDuration atTime:(*segment).clip.linearTime basedOnAd:baseAd andGetClipId:nil];
+        if (!success)
+        {
+            FRAMEWORK_LOG(@"Failed to schedule all the ads in ad pod specified in the VAST manifest");
+            break;
+        }
+    } while (NO);
+    [adPodArray removeAllObjects];
+    [adPodArray release];
+    
+    // if there is error scheduling the VAST ad, send error notification but moves on to the next segment anyway
+    if (!success)
+    {
+        [self sendErrorNotification];
+    }
+
+    // Try to get the next segment
+    PlaybackSegment *newSegment = nil;
+    if (isBuffering)
+    {
+        success = [sequencer getSegmentOnEndOfBuffering:&newSegment withCurrentSegment:(*segment) mediaTime:0 currentPlaybackRate:rate];
+    }
+    else
+    {
+        success = [sequencer getSegmentOnEndOfMedia:&newSegment withCurrentSegment:(*segment) mediaTime:0 currentPlaybackRate:rate isNotPlayed:NO isEndOfSequence:NO];
+    }
+      
+    if (!success)
+    {
+        self.lastError = sequencer.lastError;
+    }
+    else
+    {
+        *segment = newSegment;
     }
     
     return success;
@@ -1209,6 +1884,11 @@ NSString *kStatusKey = @"status";
     [mediaTime release];
     
     return currentTime;
+}
+
+- (AdResolver *) adResolver
+{
+    return sequencer.adResolver;
 }
 
 #pragma mark -
@@ -1364,6 +2044,7 @@ NSString *kStatusKey = @"status";
     [currentSegment release];
     [nextSegment release];
     [lastError release];
+    [appDelegate release];
 
     for (AVPlayerLayerView *playerView in avPlayerViews)
     {

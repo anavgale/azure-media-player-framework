@@ -13,59 +13,40 @@
 // FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 //
 
-#import "PlaybackSegment_Internal.h"
+#import "Icon.h"
 #import "Trace.h"
 
-@implementation PlaybackSegment
+@implementation Icon
 
 #pragma mark -
 #pragma mark Properties:
 
-@synthesize clip;
-@synthesize initialPlaybackTime;
-@synthesize initialPlaybackRate;
-@synthesize segmentId;
-@synthesize error;
-@synthesize status;
-
-#pragma mark -
-#pragma mark Internal Properties:
-
-// viewIndex property.
-//
-// getter method of the viewIndex property.
-//
-// Arguments:   none.
-//
-// Returns:
-// The value of viewIndex.
-//
-- (int32_t) viewIndex
-{
-    return (viewIndex);
-}
-
-// setter method of the viewIndex property.
-//
-// Arguments:
-// [newViewIndex]   int32_t to be set.
-//
-// Returns: none.
-//
-- (void) setViewIndex:(int32_t)newViewIndex
-{
-    viewIndex = newViewIndex;
-}
+@synthesize type;
+@synthesize uriString;
+@synthesize creativeType;
+@synthesize program;
+@synthesize width;
+@synthesize height;
+@synthesize xPosition;
+@synthesize yPosition;
+@synthesize duration;
+@synthesize offset;
+@synthesize apiFramework;
+@synthesize iconClicks;
 
 #pragma mark -
 #pragma mark Destructor:
 
 - (void) dealloc
 {
-    SEQUENCER_LOG(@"PlaybackSegment dealloc called.");
+    SEQUENCER_LOG(@"Icon dealloc called.");
     
-    [clip release];
-    [error release];
+    [type release];
+    [uriString release];
+    [creativeType release];
+    [program release];
+    [apiFramework release];
+    [iconClicks release];
     
     [super dealloc];
 }

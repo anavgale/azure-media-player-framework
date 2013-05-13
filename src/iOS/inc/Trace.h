@@ -13,37 +13,8 @@
 // FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 //
 
-#import "PlaylistEntry.h"
-#import "Trace.h"
-
-@implementation PlaylistEntry
-
-#pragma mark -
-#pragma mark Properties:
-
-@synthesize type;
-@synthesize entryId;
-@synthesize originalId;
-@synthesize linearTime;
-@synthesize clipURI;
-@synthesize mediaTime;
-@synthesize isAdvertisement;
-@synthesize deleteAfterPlayed;
-@synthesize playbackPolicy;
-
-#pragma mark -
-#pragma mark Destructor:
-
-- (void) dealloc
-{
-    SEQUENCER_LOG(@"PlaylistEntry dealloc called.");
-    
-    [linearTime release];
-    [clipURI release];
-    [mediaTime release];
-    [playbackPolicy release];
-    
-    [super dealloc];
-}
-
-@end
+#ifdef ENABLE_SEQUENCER_TRACE
+#define SEQUENCER_LOG(format, ...) NSLog(format, ## __VA_ARGS__)
+#else
+#define SEQUENCER_LOG(format, ...)
+#endif

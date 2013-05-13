@@ -17,6 +17,7 @@
 #import "PlaybackSegment_Internal.h"
 #import "Scheduler_Internal.h"
 #import "AdResolver_Internal.h"
+#import "Trace.h"
 
 // Define constant like: NSString * const NotImplementedException = @"NotImplementedException";
 NSString * const ErrorDomain = @"PLAYER_SEQUENCER";
@@ -73,6 +74,11 @@ NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
     }        
     
     return error;
+}
+
++ (NSString *) jsonStringFromXmlString:(NSString *)xmlString
+{
+    return [[[xmlString stringByReplacingOccurrencesOfString:@"\"" withString:@"\\\\\\\""] stringByReplacingOccurrencesOfString:@"\r" withString:@"\\\r"] stringByReplacingOccurrencesOfString:@"\n" withString:@"\\\n"];
 }
 
 #pragma mark -
@@ -152,10 +158,10 @@ NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
 
 - (NSString *) callJavaScriptWithString:(NSString *)aString
 {
-    NSLog(@"JavaScript call: %s", [aString cStringUsingEncoding:NSUTF8StringEncoding]);
+    SEQUENCER_LOG(@"JavaScript call: %s", [aString cStringUsingEncoding:NSUTF8StringEncoding]);
     NSString *result = [webView stringByEvaluatingJavaScriptFromString:aString];
     
-    NSLog(@"JavaScript result is %@", result);
+    SEQUENCER_LOG(@"JavaScript result is %@", result);
 
     NSError *error = [Sequencer parseJSONException:result];
     if (nil != error)
@@ -512,7 +518,7 @@ NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
 
 - (void) dealloc
 {
-    NSLog(@"Sequencer dealloc called.");
+    SEQUENCER_LOG(@"Sequencer dealloc called.");
     
     [adResolver release];
     [scheduler release];

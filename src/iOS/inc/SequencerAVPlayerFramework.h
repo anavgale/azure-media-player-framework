@@ -17,14 +17,29 @@
 #import <UIKit/UIKit.h>
 #import "PlaylistEntry.h"
 
+#ifdef ENABLE_FRAMEWORK_TRACE
+#define FRAMEWORK_LOG(format, ...) NSLog(format, ## __VA_ARGS__)
+#else
+#define FRAMEWORK_LOG(format, ...)
+#endif
+
 @class AVPlayer;
 @class Sequencer;
 @class Scheduler;
+@class AdResolver;
 @class PlaybackSegment;
 @class SeekbarTime;
 @class MediaTime;
 @class LinearTime;
 @class AdInfo;
+@class MediaFile;
+
+@protocol VASTAdSelection <NSObject>
+
+@optional
+- (MediaFile *)selectMediaFile:(NSArray *)mediaFilesList;
+
+@end
 
 @interface SeekbarTimeUpdatedEventArgs : NSObject
 {
@@ -65,13 +80,16 @@
     BOOL isStopped;
     BOOL resetView;
     NSError *lastError;
+    id appDelegate;
 }
 
 @property (nonatomic, retain) AVPlayer *player;
+@property (nonatomic, readonly) AdResolver *adResolver;
 @property (nonatomic, assign) float rate;
 @property (nonatomic, readonly) NSTimeInterval currentPlaybackTime;
 @property (nonatomic, readonly) NSTimeInterval currentLinearTime;
 @property (nonatomic, retain) NSError *lastError;
+@property (nonatomic, retain) id appDelegate;
 
 - (id) initWithView:(UIView *)videoView;
 - (BOOL) play;
@@ -81,6 +99,8 @@
 - (BOOL) skipCurrentPlaylistEntry;
 
 - (BOOL) scheduleClip:(AdInfo *)ad atTime:(LinearTime *)linearTime forType:(PlaylistEntryType)type andGetClipId:(int32_t *)clipId;
+- (BOOL) scheduleVASTClip:(AdInfo *)ad withManifest:(NSString *)vastManifest atTime:(LinearTime *)linearTime andGetClipId:(int32_t *)clipId;
+- (BOOL) scheduleVMAPWithManifest:(NSString *)vmapManifest;
 - (BOOL) appendContentClip:(NSURL *)clipURL withMediaTime:(MediaTime *)mediaTime andGetClipId:(int32_t *)clipId;
 - (BOOL) cancelClip:(int32_t)clipContext;
 

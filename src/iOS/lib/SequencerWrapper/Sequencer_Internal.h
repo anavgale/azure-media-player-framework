@@ -18,6 +18,7 @@
 @interface Sequencer(_internal)
 
 + (NSError *) parseJSONException:(NSString *)jsonResult;
++ (NSString *) jsonStringFromXmlString:(NSString *)xmlString;
 
 @end
 

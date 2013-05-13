@@ -171,11 +171,6 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
                     throw new PLAYER_SEQUENCER.SchedulerError('insertEntry of non-advertisement');
                 }
 
-                // TODO: remove this when overlay ads are implemented:
-                if (playlistEntry.linearDuration !== 0) {
-                    throw new PLAYER_SEQUENCER.SchedulerError('insertEntry of overlay ad is currently not supported');
-                }
-
                 indexFound = findEntryIndexAtTime(playlistEntry.linearStartTime);
                 if (indexFound === playlist.length) {
                     throw new PLAYER_SEQUENCER.SchedulerError('insertEntry linearStartTime ' + playlistEntry.linearStartTime.toString() + ' outside playlist range');
@@ -190,6 +185,21 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
                     if (playlistEntry.linearStartTime > entryFound.linearStartTime) {
                         playlistEntry.linearStartTime = entryFound.linearStartTime;
                     }
+
+                    if ( playlistEntry.linearDuration > 0) {
+                        // Note: overlay ads are not allowed to span RCE clips or content split by other ads
+                        if (entryFound.isAdvertisement) {
+                            throw new PLAYER_SEQUENCER.SchedulerError('insertEntry overlay across another ad');
+                        }
+                        if ( playlistEntry.linearDuration > entryFound.linearDuration) {
+                            throw new PLAYER_SEQUENCER.SchedulerError('insertEntry overlay beyond end of program content clip');
+                        }
+                        entryFound.linearStartTime += playlistEntry.linearDuration;
+                        entryFound.linearDuration -= playlistEntry.linearDuration;
+                        entryFound.incrementSplitCount( privateMethodKey );
+                        entryFound.clipEndMediaTime = entryFound.clipBeginMediaTime + entryFound.linearDuration;
+                    }
+
                     playlist.splice(indexFound, 0, playlistEntry);
                 }
                 else {
@@ -205,7 +215,6 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
 
                     playlistEntry.linearStartTime = entryFound.linearStartTime + entryFound.linearDuration;
 
-                    /* TODO: to support overlay ads, add the following:
                     if ( playlistEntry.linearDuration > 0) {
                         // Note: overlay ads are not allowed to span RCE clips or content split by other ads
                         if ( playlistEntry.linearDuration > entrySplit.linearDuration) {
@@ -213,8 +222,8 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
                         }                        
                         entrySplit.linearStartTime += playlistEntry.linearDuration;
                         entrySplit.linearDuration -= playlistEntry.linearDuration;
+                        entrySplit.clipBeginMediaTime += playlistEntry.linearDuration;
                     }
-                    */
 
                     // insert new entry after the first part and the second part after that
                     playlist.splice(indexFound + 1, 0, playlistEntry);
@@ -241,9 +250,22 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
             insertEntryBeforeBeginning: function (playlistEntry) {
                 ///<summary>Insert the provided entry at the beginning of the playList.</summary>
                 ///<param name="playlistEntry" type="Object">The playlistEntry to be inserted at the beginning of the sequentialPlayList.</param>
+                var entryFound;
+
                 if (playlistEntry.linearDuration > 0) {
-                    // TODO: handle overlay preroll ad case (adjust underlying main content linear and begin/end media times)
-                    throw new PLAYER_SEQUENCER.SchedulerError('insertEntryBeforeBeginning overlay ad not yet supported');
+                    // handle overlay ad case (adjust underlying main content linear and begin/end media times)
+                    // Note: overlay ads are not allowed to span RCE clips or content split by other ads
+                    entryFound = playlist[0];
+                    if (entryFound.isAdvertisement) {
+                        throw new PLAYER_SEQUENCER.SchedulerError('insertEntry overlay across another ad');
+                    }
+                    if ( playlistEntry.linearDuration > entryFound.linearDuration) {
+                        throw new PLAYER_SEQUENCER.SchedulerError('insertEntry overlay beyond end of program content clip');
+                    }
+                    entryFound.linearStartTime += playlistEntry.linearDuration;
+                    entryFound.linearDuration -= playlistEntry.linearDuration;
+                    entryFound.incrementSplitCount( privateMethodKey );
+                    entryFound.clipEndMediaTime = entryFound.clipBeginMediaTime + entryFound.linearDuration;
                 }
                 playlist.unshift(playlistEntry);
             },
@@ -252,7 +274,8 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
                 ///<summary>Insert the provided entry after an existing entry.</summary>
                 ///<param name="idToFind" type="number">id of playlistEntry after which the insertion is to take place.</param>
                 ///<param name="playlistEntry" type="Object">The playlistEntry to be inserted after the specified entry.</param>
-                var i = indexFromId( idToFind, "insertEntryAfterId" );
+                var i = indexFromId(idToFind, "insertEntryAfterId");
+                var entryAfter;
 
                 if (playlist[i].eClipType === "SeekToStart") {
                     throw new PLAYER_SEQUENCER.SchedulerError('insertEntryAfterId ' + idToFind.toString() + ' cannot be inserted after SeekToStart');
@@ -263,8 +286,20 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
                     playlist.splice(i + 1, 0, playlistEntry);
                 }
                 else {
-                    // TODO: handle overlay ad case (adjust underlying main content linear and begin/end media times)
-                    throw new PLAYER_SEQUENCER.SchedulerError('insertEntryAfterId overlay ad not yet supported');
+                    // handle overlay ad case (adjust underlying main content linear and begin/end media times)
+                    // Note: overlay ads are not allowed to span RCE clips or content split by other ads
+                    entryAfter = playlist[i + 1];
+                    if (entryAfter.isAdvertisement) {
+                        throw new PLAYER_SEQUENCER.SchedulerError('insertEntry overlay across another ad');
+                    }
+                    if ( playlistEntry.linearDuration > entryAfter.linearDuration) {
+                        throw new PLAYER_SEQUENCER.SchedulerError('insertEntry overlay beyond end of program content clip');
+                    }
+                    entryAfter.linearStartTime += playlistEntry.linearDuration;
+                    entryAfter.linearDuration -= playlistEntry.linearDuration;
+                    entryAfter.incrementSplitCount( privateMethodKey );
+                    entryAfter.clipEndMediaTime = entryFound.clipBeginMediaTime + entryFound.linearDuration;
+                    playlist.splice(i + 1, 0, playlistEntry);
                 }
             },
 
@@ -319,8 +354,20 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
                     // remove the after entry from the list:
                     playlist.splice(i,1);
                 }
-                // TODO: handle overlay ads by adjusting start times of any following ads and the
-                //       next overlaid main content item and the main content item duration.
+                // handle overlay ads by adjusting start times of any following ads and the
+                // next overlaid main content item and the main content item duration.
+                if (i > 0 && i < playlist.length && playlist[i -1].startTime + playlist[i - 1].linearDuration < playlist[i].startTime) {
+                    // There is a gap in the linear timeline. This can happen when the removed overlay ad covers the first part of the main content
+                    if (playlist[i].linearDuration === 0) {
+                        throw new PLAYER_SEQUENCER.SchedulerError( 'overlay ad removed should not be followed by another pause timeline true ad' );
+                    }
+                    if (objRemoved.linearDuration === 0) {
+                        throw new PLAYER_SEQUENCER.SchedulerError('removing a pause time true ad should not introduce gaps in the linear timeline');
+                    }
+                    playlist[i].startTime -= objRemoved.linearDuration;
+                    playlist[i].clipBeginMediaTime -= objRemoved.linearDuration;
+                    playlist[i].incrementSplitCount( privateMethodKey );                    
+                }
                 return objRemoved;
             },
 
@@ -518,11 +565,6 @@ PLAYER_SEQUENCER.createScheduler = function (sequentialPlaylist) {
             }
 
             playlistEntry.isAdvertisement = true;
-            // NOTE: For now do not allow overlay ads
-            // TODO: preroll ads should always be pause-timeline-true (zero linear duration)
-            if (playlistEntry.linearDuration > 0) {
-                throw new PLAYER_SEQUENCER.SchedulerError('scheduleClip overlay currently not supported');
-            }
 
             if (params.playbackPolicyObj !== undefined) {
                 playlistEntry.playbackPolicyObj = params.playbackPolicyObj;

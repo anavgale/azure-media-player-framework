@@ -15,6 +15,7 @@
 
 #import "Scheduler_Internal.h"
 #import "Sequencer_Internal.h"
+#import "Trace.h"
 
 // Define constant like: NSString * const NotImplementedException = @"NotImplementedException";
 
@@ -31,10 +32,10 @@
 
 - (NSString *) callJavaScriptWithString:(NSString *)aString
 {
-    NSLog(@"JavaScript call: %s", [aString cStringUsingEncoding:NSUTF8StringEncoding]);
+    SEQUENCER_LOG(@"JavaScript call: %s", [aString cStringUsingEncoding:NSUTF8StringEncoding]);
     NSString *result = [webView stringByEvaluatingJavaScriptFromString:aString];
     
-    NSLog(@"JavaScript result is %@", result);
+    SEQUENCER_LOG(@"JavaScript result is %@", result);
 
     NSError *error = [Sequencer parseJSONException:result];
     if (nil != error)
@@ -114,11 +115,30 @@
             break;
     }
     
+    NSString *eClipType = nil;
+    switch (type) {
+        case PlaylistEntryType_Media:
+            eClipType = @"Media";
+            break;
+        
+        case PlaylistEntryType_VAST:
+            eClipType = @"VAST";
+            break;
+            
+        case PlaylistEntryType_SeekToStart:
+            eClipType = @"SeekToStart";
+            break;
+            
+        default:
+            eClipType = @"Static";
+            break;
+    }
+    
     NSString *function = [[[NSString alloc] initWithFormat:@"PLAYER_SEQUENCER.scheduler.runJSON("
                           "\"{\\\"func\\\": \\\"scheduleClip\\\","
                           "\\\"params\\\": "
                           "{ \\\"clipURI\\\": \\\"%s\\\", "
-                          "\\\"eClipType\\\": \\\"Media\\\", "
+                          "\\\"eClipType\\\": \\\"%@\\\", "
                           "\\\"clipBeginMediaTime\\\": %f, "
                           "\\\"clipEndMediaTime\\\": %f, "
                           "\\\"startTime\\\": %f, "
@@ -127,6 +147,7 @@
                           "\\\"eRollType\\\": \\\"%@\\\", "
                           "\\\"appendTo\\\": %d } }\")",
                           [[ad.clipURL absoluteString] cStringUsingEncoding:NSUTF8StringEncoding],
+                          eClipType,
                           ad.mediaTime.clipBeginMediaTime,
                           ad.mediaTime.clipEndMediaTime,
                           linearTime.startTime,
@@ -159,11 +180,16 @@
 //
 - (BOOL) cancelClip:(int32_t)clipId
 {
-    BOOL success = YES;
-
-    // TODO: implement this
+    NSString *result = nil;
     
-    return success;
+    NSString *function = [[[NSString alloc] initWithFormat:@"PLAYER_SEQUENCER.scheduler.runJSON("
+                           "\"{\\\"func\\\": \\\"removeClip\\\", "
+                           "\\\"params\\\": "
+                           "{\\\"playlistEntryId\\\": %d } }\")",
+                           clipId] autorelease];
+    result = [self callJavaScriptWithString:function];
+
+    return (nil != result);
 }
 
 //
@@ -257,10 +283,10 @@
     
     function = [[[NSString alloc] initWithFormat:@"PLAYER_SEQUENCER.scheduler.runJSON("
                  "\"{\\\"func\\\": \\\"createContentClipParams\\\" }\")"] autorelease];
-    NSLog(@"JavaScript call: %s", [function cStringUsingEncoding:NSUTF8StringEncoding]);
+    SEQUENCER_LOG(@"JavaScript call: %s", [function cStringUsingEncoding:NSUTF8StringEncoding]);
     result = [webView stringByEvaluatingJavaScriptFromString:function];
     
-    NSLog(@"JavaScript result is %@", result);
+    SEQUENCER_LOG(@"JavaScript result is %@", result);
     
     return (0 < [result length]);
 }
@@ -270,7 +296,7 @@
 
 - (void) dealloc
 {
-    NSLog(@"Scheduler dealloc called.");
+    SEQUENCER_LOG(@"Scheduler dealloc called.");
     
     [lastError release];
     

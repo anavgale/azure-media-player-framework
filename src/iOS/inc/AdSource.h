@@ -13,37 +13,34 @@
 // FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 //
 
-#import "PlaylistEntry.h"
-#import "Trace.h"
+#import <Foundation/Foundation.h>
+#import "CompositeElement.h"
 
-@implementation PlaylistEntry
-
-#pragma mark -
-#pragma mark Properties:
-
-@synthesize type;
-@synthesize entryId;
-@synthesize originalId;
-@synthesize linearTime;
-@synthesize clipURI;
-@synthesize mediaTime;
-@synthesize isAdvertisement;
-@synthesize deleteAfterPlayed;
-@synthesize playbackPolicy;
-
-#pragma mark -
-#pragma mark Destructor:
-
-- (void) dealloc
+typedef enum
 {
-    SEQUENCER_LOG(@"PlaylistEntry dealloc called.");
-    
-    [linearTime release];
-    [clipURI release];
-    [mediaTime release];
-    [playbackPolicy release];
-    
-    [super dealloc];
+    VASTData,
+    CustomAdData,
+    AdTagURI
+} VMAPAdSourceType;
+
+@interface AdSource : NSObject
+{
+@private
+    VMAPAdSourceType type;
+    NSString *idString;
+    BOOL allowMultipleAds;
+    BOOL followRedirects;
+    NSString *templateType;
+    NSString *value;
+    CompositeElement *element;
 }
+
+@property(nonatomic, assign) VMAPAdSourceType type;
+@property(nonatomic, retain) NSString *idString;
+@property(nonatomic, assign) BOOL allowMultipleAds;
+@property(nonatomic, assign) BOOL followRedirects;
+@property(nonatomic, retain) NSString *templateType;
+@property(nonatomic, retain) NSString *value;
+@property(nonatomic, retain) CompositeElement *element;
 
 @end

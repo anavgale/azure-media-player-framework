@@ -16,11 +16,12 @@
 #import <UIKit/UIKit.h>
 
 #import "SeekbarViewController.h"
+#import "SequencerAVPlayerFramework.h"
 
 @class SequencerAVPlayerFramework;
 @class PlaylistEntry;
 
-@interface SamplePlayerViewController : UIViewController
+@interface SamplePlayerViewController : UIViewController <VASTAdSelection>
 {
 @private
     UITextField *urlText;
@@ -61,6 +62,7 @@
 - (void) onSeekMinusButtonPressed;
 - (void) onSeekPlusButtonPressed;
 - (void) onScheduleNowButtonPressed;
+- (MediaFile *) selectMediaFile:(NSArray *)mediaFilesList;
 
 - (IBAction) textfieldDoneEditing:(id) sender;
 

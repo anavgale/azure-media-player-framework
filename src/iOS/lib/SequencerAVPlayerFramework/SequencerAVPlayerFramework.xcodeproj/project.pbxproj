@@ -259,6 +259,7 @@
 					.,
 					../SequencerWrapper,
 				);
+				"OTHER_CFLAGS[arch=*]" = "-DENABLE_FRAMEWORK_TRACE";
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				RELEASE_SHARE_ROOT = /Users/$USER/iOSRelease;

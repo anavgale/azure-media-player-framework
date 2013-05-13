@@ -8,6 +8,20 @@
 
 /* Begin PBXBuildFile section */
 		3244686E169CA7F400FE7B0A /* MediaTime.m in Sources */ = {isa = PBXBuildFile; fileRef = 3244686D169CA7F400FE7B0A /* MediaTime.m */; };
+		329674C416B85BE6000EFC51 /* CompositeElement.m in Sources */ = {isa = PBXBuildFile; fileRef = 329674C316B85BE6000EFC51 /* CompositeElement.m */; };
+		329674C616B85C00000EFC51 /* CompanionAd.m in Sources */ = {isa = PBXBuildFile; fileRef = 329674C516B85C00000EFC51 /* CompanionAd.m */; };
+		329674CD16B85C2B000EFC51 /* Ad.m in Sources */ = {isa = PBXBuildFile; fileRef = 329674C716B85C2B000EFC51 /* Ad.m */; };
+		329674CE16B85C2B000EFC51 /* Creative.m in Sources */ = {isa = PBXBuildFile; fileRef = 329674C816B85C2B000EFC51 /* Creative.m */; };
+		329674CF16B85C2B000EFC51 /* Icon.m in Sources */ = {isa = PBXBuildFile; fileRef = 329674C916B85C2B000EFC51 /* Icon.m */; };
+		329674D016B85C2B000EFC51 /* NonlinearAd.m in Sources */ = {isa = PBXBuildFile; fileRef = 329674CA16B85C2B000EFC51 /* NonlinearAd.m */; };
+		329674D116B85C2B000EFC51 /* TrackingEvent.m in Sources */ = {isa = PBXBuildFile; fileRef = 329674CB16B85C2B000EFC51 /* TrackingEvent.m */; };
+		329674D216B85C2B000EFC51 /* VideoClick.m in Sources */ = {isa = PBXBuildFile; fileRef = 329674CC16B85C2B000EFC51 /* VideoClick.m */; };
+		329674D416BB4C4B000EFC51 /* MediaFile.m in Sources */ = {isa = PBXBuildFile; fileRef = 329674D316BB4C4B000EFC51 /* MediaFile.m */; };
+		329674D716BDDF28000EFC51 /* VASTParser.m in Sources */ = {isa = PBXBuildFile; fileRef = 329674D516BDDF27000EFC51 /* VASTParser.m */; };
+		329674D816BDDF28000EFC51 /* VMAPParser.m in Sources */ = {isa = PBXBuildFile; fileRef = 329674D616BDDF28000EFC51 /* VMAPParser.m */; };
+		329674DB16C03299000EFC51 /* AdBreak.m in Sources */ = {isa = PBXBuildFile; fileRef = 329674D916C03299000EFC51 /* AdBreak.m */; };
+		329674DC16C03299000EFC51 /* AdSource.m in Sources */ = {isa = PBXBuildFile; fileRef = 329674DA16C03299000EFC51 /* AdSource.m */; };
+		329674DE16C08137000EFC51 /* VMAPExtension.m in Sources */ = {isa = PBXBuildFile; fileRef = 329674DD16C08137000EFC51 /* VMAPExtension.m */; };
 		329DB91C1611049C004C6873 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 329DB91B1611049C004C6873 /* Foundation.framework */; };
 		329DB92A16110984004C6873 /* AdInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = 329DB92916110984004C6873 /* AdInfo.m */; };
 		329DB92C16110993004C6873 /* AdResolver.m in Sources */ = {isa = PBXBuildFile; fileRef = 329DB92B16110993004C6873 /* AdResolver.m */; };
@@ -34,12 +48,25 @@
 
 /* Begin PBXFileReference section */
 		3244686D169CA7F400FE7B0A /* MediaTime.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = MediaTime.m; path = Classes/MediaTime.m; sourceTree = "<group>"; };
+		329674C316B85BE6000EFC51 /* CompositeElement.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CompositeElement.m; path = Classes/CompositeElement.m; sourceTree = "<group>"; };
+		329674C516B85C00000EFC51 /* CompanionAd.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = CompanionAd.m; path = Classes/CompanionAd.m; sourceTree = "<group>"; };
+		329674C716B85C2B000EFC51 /* Ad.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = Ad.m; path = Classes/Ad.m; sourceTree = "<group>"; };
+		329674C816B85C2B000EFC51 /* Creative.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = Creative.m; path = Classes/Creative.m; sourceTree = "<group>"; };
+		329674C916B85C2B000EFC51 /* Icon.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = Icon.m; path = Classes/Icon.m; sourceTree = "<group>"; };
+		329674CA16B85C2B000EFC51 /* NonlinearAd.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = NonlinearAd.m; path = Classes/NonlinearAd.m; sourceTree = "<group>"; };
+		329674CB16B85C2B000EFC51 /* TrackingEvent.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = TrackingEvent.m; path = Classes/TrackingEvent.m; sourceTree = "<group>"; };
+		329674CC16B85C2B000EFC51 /* VideoClick.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = VideoClick.m; path = Classes/VideoClick.m; sourceTree = "<group>"; };
+		329674D316BB4C4B000EFC51 /* MediaFile.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = MediaFile.m; path = Classes/MediaFile.m; sourceTree = "<group>"; };
+		329674D516BDDF27000EFC51 /* VASTParser.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = VASTParser.m; path = Classes/VASTParser.m; sourceTree = "<group>"; };
+		329674D616BDDF28000EFC51 /* VMAPParser.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = VMAPParser.m; path = Classes/VMAPParser.m; sourceTree = "<group>"; };
+		329674D916C03299000EFC51 /* AdBreak.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = AdBreak.m; path = Classes/AdBreak.m; sourceTree = "<group>"; };
+		329674DA16C03299000EFC51 /* AdSource.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = AdSource.m; path = Classes/AdSource.m; sourceTree = "<group>"; };
+		329674DD16C08137000EFC51 /* VMAPExtension.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = VMAPExtension.m; path = Classes/VMAPExtension.m; sourceTree = "<group>"; };
 		329DB9181611049C004C6873 /* libSequencerWrapper.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libSequencerWrapper.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		329DB91B1611049C004C6873 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		329DB92916110984004C6873 /* AdInfo.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = AdInfo.m; path = Classes/AdInfo.m; sourceTree = "<group>"; };
 		329DB92B16110993004C6873 /* AdResolver.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = AdResolver.m; path = Classes/AdResolver.m; sourceTree = "<group>"; };
 		329DB92D161109C8004C6873 /* LinearTime.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = LinearTime.m; path = Classes/LinearTime.m; sourceTree = "<group>"; };
-		329DB92F161109D6004C6873 /* ManifestTime.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = ManifestTime.m; path = Classes/ManifestTime.m; sourceTree = "<group>"; };
 		329DB931161109EA004C6873 /* PlaybackPolicy.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = PlaybackPolicy.m; path = Classes/PlaybackPolicy.m; sourceTree = "<group>"; };
 		329DB93316110A0B004C6873 /* PlaybackSegment.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = PlaybackSegment.m; path = Classes/PlaybackSegment.m; sourceTree = "<group>"; };
 		329DB93516110A17004C6873 /* PlaylistEntry.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = PlaylistEntry.m; path = Classes/PlaylistEntry.m; sourceTree = "<group>"; };
@@ -63,6 +90,20 @@
 		329DB90D1611049B004C6873 = {
 			isa = PBXGroup;
 			children = (
+				329674DD16C08137000EFC51 /* VMAPExtension.m */,
+				329674D916C03299000EFC51 /* AdBreak.m */,
+				329674DA16C03299000EFC51 /* AdSource.m */,
+				329674D516BDDF27000EFC51 /* VASTParser.m */,
+				329674D616BDDF28000EFC51 /* VMAPParser.m */,
+				329674D316BB4C4B000EFC51 /* MediaFile.m */,
+				329674C716B85C2B000EFC51 /* Ad.m */,
+				329674C816B85C2B000EFC51 /* Creative.m */,
+				329674C916B85C2B000EFC51 /* Icon.m */,
+				329674CA16B85C2B000EFC51 /* NonlinearAd.m */,
+				329674CB16B85C2B000EFC51 /* TrackingEvent.m */,
+				329674CC16B85C2B000EFC51 /* VideoClick.m */,
+				329674C516B85C00000EFC51 /* CompanionAd.m */,
+				329674C316B85BE6000EFC51 /* CompositeElement.m */,
 				3244686D169CA7F400FE7B0A /* MediaTime.m */,
 				329DB93B16110A4D004C6873 /* Sequencer.m */,
 				329DB93916110A3A004C6873 /* SeekbarTime.m */,
@@ -70,7 +111,6 @@
 				329DB93516110A17004C6873 /* PlaylistEntry.m */,
 				329DB93316110A0B004C6873 /* PlaybackSegment.m */,
 				329DB931161109EA004C6873 /* PlaybackPolicy.m */,
-				329DB92F161109D6004C6873 /* ManifestTime.m */,
 				329DB92D161109C8004C6873 /* LinearTime.m */,
 				329DB92B16110993004C6873 /* AdResolver.m */,
 				329DB92916110984004C6873 /* AdInfo.m */,
@@ -146,6 +186,20 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				329674DE16C08137000EFC51 /* VMAPExtension.m in Sources */,
+				329674DB16C03299000EFC51 /* AdBreak.m in Sources */,
+				329674DC16C03299000EFC51 /* AdSource.m in Sources */,
+				329674D716BDDF28000EFC51 /* VASTParser.m in Sources */,
+				329674D816BDDF28000EFC51 /* VMAPParser.m in Sources */,
+				329674D416BB4C4B000EFC51 /* MediaFile.m in Sources */,
+				329674CD16B85C2B000EFC51 /* Ad.m in Sources */,
+				329674CE16B85C2B000EFC51 /* Creative.m in Sources */,
+				329674CF16B85C2B000EFC51 /* Icon.m in Sources */,
+				329674D016B85C2B000EFC51 /* NonlinearAd.m in Sources */,
+				329674D116B85C2B000EFC51 /* TrackingEvent.m in Sources */,
+				329674D216B85C2B000EFC51 /* VideoClick.m in Sources */,
+				329674C616B85C00000EFC51 /* CompanionAd.m in Sources */,
+				329674C416B85BE6000EFC51 /* CompositeElement.m in Sources */,
 				3244686E169CA7F400FE7B0A /* MediaTime.m in Sources */,
 				329DB93C16110A4D004C6873 /* Sequencer.m in Sources */,
 				329DB93A16110A3A004C6873 /* SeekbarTime.m in Sources */,
@@ -225,6 +279,7 @@
 					../../inc,
 					.,
 				);
+				"OTHER_CFLAGS[arch=*]" = "-DENABLE_SEQUENCER_TRACE";
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				RELEASE_SHARE_ROOT = /Users/$USER/iOSRelease;

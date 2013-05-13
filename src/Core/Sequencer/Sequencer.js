@@ -372,7 +372,7 @@ PLAYER_SEQUENCER.createDefaultSequencerPlugin = function (basePlugin) {
             playbackRangeExceeded = false,
             updatedEntry;
 
-        if (currentSegment.clip.isAdvertisement) {
+        if (currentSegment.clip.isAdvertisement && currentSegment.clip.linearDuration === 0) {
             playbackPolicy = entry.playbackPolicyObj;
             maxSeekbarPosition = clipEndMediaTime - clipBeginMediaTime;
 
@@ -387,7 +387,7 @@ PLAYER_SEQUENCER.createDefaultSequencerPlugin = function (basePlugin) {
             }
         }
         else {
-            // for non-ad get the max seekbar position (min is always zero)
+            // for non-ad or overlay ad get the max seekbar position (min is always zero)
             maxSeekbarPosition = mySequentialPlaylist.getPlaylistLinearDuration();
             currentSeekbarPosition += entry.linearStartTime;
 

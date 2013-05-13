@@ -14,6 +14,7 @@
 //
 
 #import "AdInfo.h"
+#import "Trace.h"
 
 @implementation AdInfo
 
@@ -32,7 +33,7 @@
 
 - (void) dealloc
 {
-    NSLog(@"AdInfo dealloc called.");
+    SEQUENCER_LOG(@"AdInfo dealloc called.");
     
     [clipURL release];
     [mediaTime release];

@@ -13,59 +13,44 @@
 // FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 //
 
-#import "PlaybackSegment_Internal.h"
+#import "NonlinearAd.h"
 #import "Trace.h"
 
-@implementation PlaybackSegment
+@implementation NonlinearAd
 
 #pragma mark -
 #pragma mark Properties:
 
-@synthesize clip;
-@synthesize initialPlaybackTime;
-@synthesize initialPlaybackRate;
-@synthesize segmentId;
-@synthesize error;
-@synthesize status;
-
-#pragma mark -
-#pragma mark Internal Properties:
-
-// viewIndex property.
-//
-// getter method of the viewIndex property.
-//
-// Arguments:   none.
-//
-// Returns:
-// The value of viewIndex.
-//
-- (int32_t) viewIndex
-{
-    return (viewIndex);
-}
-
-// setter method of the viewIndex property.
-//
-// Arguments:
-// [newViewIndex]   int32_t to be set.
-//
-// Returns: none.
-//
-- (void) setViewIndex:(int32_t)newViewIndex
-{
-    viewIndex = newViewIndex;
-}
+@synthesize type;
+@synthesize uriString;
+@synthesize idString;
+@synthesize width;
+@synthesize height;
+@synthesize expandedWidth;
+@synthesize expandedHeight;
+@synthesize scalable;
+@synthesize maintainAspectRatio;
+@synthesize minSuggestedDuration;
+@synthesize apiFramework;
+@synthesize trackingId;
+@synthesize xmlEncoded;
+@synthesize event;
+@synthesize creativeType;
 
 #pragma mark -
 #pragma mark Destructor:
 
 - (void) dealloc
 {
-    SEQUENCER_LOG(@"PlaybackSegment dealloc called.");
+    SEQUENCER_LOG(@"NonlinearAd dealloc called.");
     
-    [clip release];
-    [error release];
+    [type release];
+    [uriString release];
+    [idString release];
+    [apiFramework release];
+    [trackingId release];
+    [event release];
+    [creativeType release];
     
     [super dealloc];
 }

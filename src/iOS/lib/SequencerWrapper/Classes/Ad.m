@@ -13,59 +13,48 @@
 // FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 //
 
-#import "PlaybackSegment_Internal.h"
+#import "Ad.h"
 #import "Trace.h"
 
-@implementation PlaybackSegment
+@implementation Ad
 
 #pragma mark -
 #pragma mark Properties:
 
-@synthesize clip;
-@synthesize initialPlaybackTime;
-@synthesize initialPlaybackRate;
-@synthesize segmentId;
+@synthesize type;
+@synthesize idString;
+@synthesize sequence;
+@synthesize adSystem;
+@synthesize adTitle;
+@synthesize description;
 @synthesize error;
-@synthesize status;
-
-#pragma mark -
-#pragma mark Internal Properties:
-
-// viewIndex property.
-//
-// getter method of the viewIndex property.
-//
-// Arguments:   none.
-//
-// Returns:
-// The value of viewIndex.
-//
-- (int32_t) viewIndex
-{
-    return (viewIndex);
-}
-
-// setter method of the viewIndex property.
-//
-// Arguments:
-// [newViewIndex]   int32_t to be set.
-//
-// Returns: none.
-//
-- (void) setViewIndex:(int32_t)newViewIndex
-{
-    viewIndex = newViewIndex;
-}
+@synthesize impression;
+@synthesize creatives;
+@synthesize extensions;
+@synthesize advertiser;
+@synthesize pricing;
+@synthesize survey;
+@synthesize adTagURI;
 
 #pragma mark -
 #pragma mark Destructor:
 
 - (void) dealloc
 {
-    SEQUENCER_LOG(@"PlaybackSegment dealloc called.");
+    SEQUENCER_LOG(@"Ad dealloc called.");
     
-    [clip release];
+    [idString release];
+    [adSystem release];
+    [adTitle release];
+    [description release];
     [error release];
+    [impression release];
+    [creatives release];
+    [extensions release];
+    [advertiser release];
+    [pricing release];
+    [survey release];
+    [adTagURI release];
     
     [super dealloc];
 }

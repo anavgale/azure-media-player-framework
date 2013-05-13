@@ -16,28 +16,40 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIkit.h>
 
+@class VASTParser;
+@class VMAPParser;
+
 @interface ManifestDownloadedEventArgs : NSObject
 {
 @private
-    NSStream *manifest;
+    NSString *manifest;
     NSError *error;
 }
 
-@property(nonatomic, retain) NSStream *manifest;
+@property(nonatomic, retain) NSString *manifest;
 @property(nonatomic, retain) NSError *error;
 
 @end;
 
-
 @interface AdResolver : NSObject
 {
 @private
-    UIWebView *webView;    
+    NSError *lastError;
+    UIWebView *webView;
+    VASTParser *vastParser;
+    VMAPParser *vmapParser;
+    NSMutableData *downloadData;
+    NSURLConnection *downloadConnection;
 }
 
-- (BOOL) downloadManifestAsync:(NSStream **)manifest withURL:(NSURL *)url;
-- (BOOL) parseVAST:(NSArray *)adList withManifest:(NSStream *)manifest;
-- (BOOL) parseVMAP:(NSArray *)entryList withManifest:(NSStream *)manifest;
+@property(nonatomic, retain) NSError *lastError;
+@property(nonatomic, readonly) VASTParser *vastParser;
+@property(nonatomic, readonly) VMAPParser *vmapParser;
+
+- (BOOL) downloadManifestAsyncWithURL:(NSURL *)aUrl;
+- (BOOL) downloadManifest:(NSString **)manifest withURL:(NSURL *)aUrl;
+- (BOOL) releaseEntry:(int32_t)entryId;
+- (BOOL) getElementList:(NSArray **)elementList withPath:(NSArray *)xmlPath;
 
 @end
 
