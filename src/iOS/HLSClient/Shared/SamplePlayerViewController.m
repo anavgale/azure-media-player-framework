@@ -56,7 +56,7 @@ NSString * const MIME_TYPE_MP4 = @"video/mp4";
     {
         [framework skipCurrentPlaylistEntry];
     }
-    else
+    else if (nil != currentEntry)
     {
         [self onStopButtonPressed];
     }
@@ -114,6 +114,8 @@ NSString * const MIME_TYPE_MP4 = @"video/mp4";
 //
 - (void) playURL:(NSString *)url
 {
+    isLive = [url isEqualToString:@"http://man-w1/livehls.isml/manifest(format=m3u8-aapl)"] || [url isEqualToString:@"http://harryjin4/hlslive.isml/manifest(format=m3u8-aapl)"];
+    
     if (!hasStarted)
     {
         // Clear download cache to get the latest content
@@ -123,7 +125,7 @@ NSString * const MIME_TYPE_MP4 = @"video/mp4";
         MediaTime *mediaTime = [[[MediaTime alloc] init] autorelease];
         mediaTime.currentPlaybackPosition = 0;
         mediaTime.clipBeginMediaTime = 0;
-        mediaTime.clipEndMediaTime = 90;
+        mediaTime.clipEndMediaTime = -1;
         
         int clipId = 0;
         if (![framework appendContentClip:[NSURL URLWithString:url] withMediaTime:mediaTime andGetClipId:&clipId])
@@ -182,7 +184,7 @@ NSString * const MIME_TYPE_MP4 = @"video/mp4";
         vastAdInfo1.mediaTime = [[[MediaTime alloc] init] autorelease];
         vastAdInfo1.mediaTime.clipBeginMediaTime = 0;
         vastAdInfo1.mediaTime.clipEndMediaTime = 10;
-        vastAdInfo1.policy = [[[PlaybackPolicy alloc] init] autorelease];
+        vastAdInfo1.policy = @"policy for late binding VAST";
         vastAdInfo1.type = AdType_Midroll;
         vastAdInfo1.appendTo=-1;
         adIndex = 0;
@@ -190,7 +192,7 @@ NSString * const MIME_TYPE_MP4 = @"video/mp4";
         {
             [self logFrameworkError];
         }
-        */
+        */        
        
         /*
         //Example:4 Schedule an early binding VAST ad
@@ -206,7 +208,7 @@ NSString * const MIME_TYPE_MP4 = @"video/mp4";
             
             AdInfo *vastAdInfo2 = [[[AdInfo alloc] init] autorelease];
             vastAdInfo2.mediaTime = [[[MediaTime alloc] init] autorelease];
-            vastAdInfo2.policy = [[[PlaybackPolicy alloc] init] autorelease];
+            vastAdInfo2.policy = @"policy for early binding VAST";
             vastAdInfo2.type = AdType_Midroll;
             vastAdInfo2.appendTo=-1;
             if (![framework scheduleVASTClip:vastAdInfo2 withManifest:manifest atTime:adLinearTime andGetClipId:&adIndex])
@@ -227,7 +229,7 @@ NSString * const MIME_TYPE_MP4 = @"video/mp4";
         adpodInfo1.mediaTime = [[[MediaTime alloc] init] autorelease];
         adpodInfo1.mediaTime.clipBeginMediaTime = 0;
         adpodInfo1.mediaTime.clipEndMediaTime = 17;
-        adpodInfo1.policy = [[[PlaybackPolicy alloc] init] autorelease];
+        adpodInfo1.policy = @"policy for ad pod 1";
         adpodInfo1.type = AdType_Midroll;
         adpodInfo1.appendTo=-1;
         adIndex = 0;
@@ -242,7 +244,7 @@ NSString * const MIME_TYPE_MP4 = @"video/mp4";
         adpodInfo2.mediaTime = [[[MediaTime alloc] init] autorelease];
         adpodInfo2.mediaTime.clipBeginMediaTime = 0;
         adpodInfo2.mediaTime.clipEndMediaTime = 17;
-        adpodInfo2.policy = [[[PlaybackPolicy alloc] init] autorelease];
+        adpodInfo2.policy = @"policy for ad pod 2";
         adpodInfo2.type = AdType_Pod;
         adpodInfo2.appendTo = adIndex;
         if (![framework scheduleClip:adpodInfo2 atTime:adLinearTime forType:PlaylistEntryType_Media andGetClipId:&adIndex])
@@ -251,71 +253,164 @@ NSString * const MIME_TYPE_MP4 = @"video/mp4";
         }
         */
         
-        //Example:6 Schedule a single non sticky mid roll Ad 
-        NSString *oneTimeAd=@"http://wamsblureg001orig-hs.cloudapp.net/5389c0c5-340f-48d7-90bc-0aab664e5f02/Windows%208_%20You%20and%20Me%20Together-m3u8-aapl.ism/Manifest(format=m3u8-aapl)";
-        AdInfo *oneTimeInfo = [[[AdInfo alloc] init] autorelease];
-        oneTimeInfo.clipURL = [NSURL URLWithString:oneTimeAd];
-        oneTimeInfo.mediaTime = [[[MediaTime alloc] init] autorelease];
-        oneTimeInfo.mediaTime.clipBeginMediaTime = 0;
-        oneTimeInfo.mediaTime.clipEndMediaTime = 25;
-        oneTimeInfo.policy = [[[PlaybackPolicy alloc] init] autorelease];
-        adLinearTime.startTime = 43;
-        adLinearTime.duration = 0;
-        oneTimeInfo.type = AdType_Midroll;
-        oneTimeInfo.deleteAfterPlayed = YES;
-        if (![framework scheduleClip:oneTimeInfo atTime:adLinearTime forType:PlaylistEntryType_Media andGetClipId:&adIndex])
+        if (!isLive)
         {
-            [self logFrameworkError];
+            //Example:6 Schedule a single non sticky mid roll Ad
+            NSString *oneTimeAd=@"http://wamsblureg001orig-hs.cloudapp.net/5389c0c5-340f-48d7-90bc-0aab664e5f02/Windows%208_%20You%20and%20Me%20Together-m3u8-aapl.ism/Manifest(format=m3u8-aapl)";
+            AdInfo *oneTimeInfo = [[[AdInfo alloc] init] autorelease];
+            oneTimeInfo.clipURL = [NSURL URLWithString:oneTimeAd];
+            oneTimeInfo.mediaTime = [[[MediaTime alloc] init] autorelease];
+            oneTimeInfo.mediaTime.clipBeginMediaTime = 0;
+            oneTimeInfo.mediaTime.clipEndMediaTime = -1;
+            oneTimeInfo.policy = @"policy for one-time ad";
+            adLinearTime.startTime = 43;
+            adLinearTime.duration = 0;
+            oneTimeInfo.type = AdType_Midroll;
+            oneTimeInfo.deleteAfterPlayed = YES;
+            if (![framework scheduleClip:oneTimeInfo atTime:adLinearTime forType:PlaylistEntryType_Media andGetClipId:&adIndex])
+            {
+                [self logFrameworkError];
+            }
+            
+            //Example:7 Schedule a single sticky mid roll Ad
+            NSString *stickyAd=@"http://wamsblureg001orig-hs.cloudapp.net/2e4e7d1f-b72a-4994-a406-810c796fc4fc/The%20Surface%20Movement-m3u8-aapl.ism/Manifest(format=m3u8-aapl)";
+            AdInfo *stickyAdInfo = [[[AdInfo alloc] init] autorelease];
+            stickyAdInfo.clipURL = [NSURL URLWithString:stickyAd];
+            stickyAdInfo.mediaTime = [[[MediaTime alloc] init] autorelease];
+            stickyAdInfo.mediaTime.clipBeginMediaTime = 0;
+            stickyAdInfo.mediaTime.clipEndMediaTime = 15;
+            stickyAdInfo.policy = @"policy for sticky mid-roll ad";
+            adLinearTime.startTime = 64;
+            adLinearTime.duration = 0;
+            stickyAdInfo.type = AdType_Midroll;
+            stickyAdInfo.deleteAfterPlayed = NO;
+            
+            if (![framework scheduleClip:stickyAdInfo atTime:adLinearTime forType:PlaylistEntryType_Media andGetClipId:&adIndex])
+            {
+                [self logFrameworkError];
+            }
+            
+            //Example:8 Schedule Post Roll Ad
+            NSString *postAdURLString=@"http://wamsblureg001orig-hs.cloudapp.net/aa152d7f-3c54-487b-ba07-a58e0e33280b/wp-m3u8-aapl.ism/Manifest(format=m3u8-aapl)";
+            AdInfo *postAdInfo = [[[AdInfo alloc] init] autorelease];
+            postAdInfo.clipURL = [NSURL URLWithString:postAdURLString];
+            postAdInfo.mediaTime = [[[MediaTime alloc] init] autorelease];
+            postAdInfo.mediaTime.clipBeginMediaTime = 0;
+            postAdInfo.mediaTime.clipEndMediaTime = 45;
+            postAdInfo.policy = @"policy for post-roll ad";
+            postAdInfo.type = AdType_Postroll;
+            adLinearTime.duration = 0;
+            if (![framework scheduleClip:postAdInfo atTime:adLinearTime forType:PlaylistEntryType_Media andGetClipId:&adIndex])
+            {
+                [self logFrameworkError];
+            }
+            
+            //Example:9 Schedule Pre Roll Ad
+            NSString *adURLString = @"http://wamsblureg001orig-hs.cloudapp.net/2e4e7d1f-b72a-4994-a406-810c796fc4fc/The%20Surface%20Movement-m3u8-aapl.ism/Manifest(format=m3u8-aapl)";
+            AdInfo *adInfo = [[[AdInfo alloc] init] autorelease];
+            adInfo.clipURL = [NSURL URLWithString:adURLString];
+            adInfo.mediaTime = [[[MediaTime alloc] init] autorelease];
+            adInfo.mediaTime.currentPlaybackPosition = 0;
+            adInfo.mediaTime.clipBeginMediaTime = 40; //You could play a portion of an Ad. Yeh!
+            adInfo.mediaTime.clipEndMediaTime = 59;
+            adInfo.policy = @"policy for pre-roll ad";
+            adInfo.appendTo = -1;
+            adInfo.type = AdType_Preroll;
+            adLinearTime.duration = 0;
+            if (![framework scheduleClip:adInfo atTime:adLinearTime forType:PlaylistEntryType_Media andGetClipId:&adIndex])
+            {
+                [self logFrameworkError];
+            }
         }
-        
-        //Example:7 Schedule a single sticky mid roll Ad
-        NSString *stickyAd=@"http://wamsblureg001orig-hs.cloudapp.net/2e4e7d1f-b72a-4994-a406-810c796fc4fc/The%20Surface%20Movement-m3u8-aapl.ism/Manifest(format=m3u8-aapl)";
-        AdInfo *stickyAdInfo = [[[AdInfo alloc] init] autorelease];
-        stickyAdInfo.clipURL = [NSURL URLWithString:stickyAd];
-        stickyAdInfo.mediaTime = [[[MediaTime alloc] init] autorelease];
-        stickyAdInfo.mediaTime.clipBeginMediaTime = 0;
-        stickyAdInfo.mediaTime.clipEndMediaTime = 15;
-        stickyAdInfo.policy = [[[PlaybackPolicy alloc] init] autorelease];
-        adLinearTime.startTime = 64;
-        adLinearTime.duration = 0;
-        stickyAdInfo.type = AdType_Midroll;
-        stickyAdInfo.deleteAfterPlayed = NO;
-        
-        if (![framework scheduleClip:stickyAdInfo atTime:adLinearTime forType:PlaylistEntryType_Media andGetClipId:&adIndex])
+        else
         {
-            [self logFrameworkError];
-        }
-        
-        //Example:8 Schedule Post Roll Ad
-        NSString *postAdURLString=@"http://wamsblureg001orig-hs.cloudapp.net/aa152d7f-3c54-487b-ba07-a58e0e33280b/wp-m3u8-aapl.ism/Manifest(format=m3u8-aapl)";
-        AdInfo *postAdInfo = [[[AdInfo alloc] init] autorelease];
-        postAdInfo.clipURL = [NSURL URLWithString:postAdURLString];
-        postAdInfo.mediaTime = [[[MediaTime alloc] init] autorelease];
-        postAdInfo.mediaTime.clipBeginMediaTime = 0;
-        postAdInfo.mediaTime.clipEndMediaTime = 45;
-        postAdInfo.policy = [[[PlaybackPolicy alloc] init] autorelease];
-        postAdInfo.type = AdType_Postroll;
-        adLinearTime.duration = 0;
-        if (![framework scheduleClip:postAdInfo atTime:adLinearTime forType:PlaylistEntryType_Media andGetClipId:&adIndex])
-        {
-            [self logFrameworkError];
-        }
-        
-        //Example:9 Schedule Pre Roll Ad
-        NSString *adURLString = @"https://htmlsamples.blob.core.windows.net/asset-197e2747-49e7-49d2-b7fa-26b5dbc781aa/Switch%20to%20the%20Nokia%20Lumia%20920%20Windows%20Phone%20-%20Engadget%20Reader's%20Choice%20Smartphone%20of%20the%20Year..mp4?sv=2012-02-12&st=2013-05-10T19%3A38%3A53Z&se=2015-05-10T19%3A38%3A53Z&sr=c&si=83083fbf-0989-40e9-929e-5da76adddc20&sig=pVtzTXvIyh1DKcJ63c6y%2FPpEDp8dQbVQZvpfIL8I0%2Bs%3D";
-        AdInfo *adInfo = [[[AdInfo alloc] init] autorelease];
-        adInfo.clipURL = [NSURL URLWithString:adURLString];
-        adInfo.mediaTime = [[[MediaTime alloc] init] autorelease];
-        adInfo.mediaTime.currentPlaybackPosition = 0;
-        adInfo.mediaTime.clipBeginMediaTime = 40; //You could play a portion of an Ad. Yeh!
-        adInfo.mediaTime.clipEndMediaTime = 59;
-        adInfo.policy = [[[PlaybackPolicy alloc] init] autorelease];
-        adInfo.appendTo = -1;
-        adInfo.type = AdType_Preroll;
-        adLinearTime.duration = 0;
-        if (![framework scheduleClip:adInfo atTime:adLinearTime forType:PlaylistEntryType_Media andGetClipId:&adIndex])
-        {
-            [self logFrameworkError];
+            // Example10: Schedule a Mid Roll overlay Ad
+            NSString *adURLString = @"https://portalvhdsq3m25bf47d15c.blob.core.windows.net/asset-e47b43fd-05dc-4587-ac87-5916439ad07f/Windows%208_%20Cliffjumpers.mp4?st=2012-11-28T16%3A31%3A57Z&se=2014-11-28T16%3A31%3A57Z&sr=c&si=2a6dbb1e-f906-4187-a3d3-7e517192cbd0&sig=qrXYZBekqlbbYKqwovxzaVZNLv9cgyINgMazSCbdrfU%3D";
+            AdInfo *adInfo = [[[AdInfo alloc] init] autorelease];
+            adInfo.clipURL = [NSURL URLWithString:adURLString];
+            adInfo.mediaTime = [[[MediaTime alloc] init] autorelease];
+            adInfo.mediaTime.currentPlaybackPosition = 0;
+            adInfo.mediaTime.clipBeginMediaTime = 0;
+            adInfo.mediaTime.clipEndMediaTime = 20;
+            adInfo.policy = @"policy for mid-roll overlay ad";
+            adInfo.appendTo = -1;
+            adInfo.type = AdType_Midroll;
+            adLinearTime.startTime = 300;
+            adLinearTime.duration = 20;
+            if (![framework scheduleClip:adInfo atTime:adLinearTime forType:PlaylistEntryType_Media andGetClipId:&adIndex])
+            {
+                [self logFrameworkError];
+            }
+ 
+            // Example11: Schedule a Mid Roll overlay Ad without specifying the length
+            adURLString = @"http://wamsblureg001orig-hs.cloudapp.net/2e4e7d1f-b72a-4994-a406-810c796fc4fc/The%20Surface%20Movement-m3u8-aapl.ism/Manifest(format=m3u8-aapl)";
+            adInfo.clipURL = [NSURL URLWithString:adURLString];
+            adInfo.mediaTime.currentPlaybackPosition = 0;
+            adInfo.mediaTime.clipBeginMediaTime = 0;
+            adInfo.mediaTime.clipEndMediaTime = -1;
+            adInfo.policy = @"policy for mid-roll unknown length overlay ad";
+            adInfo.appendTo = -1;
+            adInfo.type = AdType_Midroll;
+            adLinearTime.startTime = 600;
+            adLinearTime.duration = 20;
+            if (![framework scheduleClip:adInfo atTime:adLinearTime forType:PlaylistEntryType_Media andGetClipId:&adIndex])
+            {
+                [self logFrameworkError];
+            }
+            
+            //Example12: How to schedule a late binding VAST ad.
+            
+            adLinearTime.startTime = 180;
+            adLinearTime.duration = 10;
+            
+            NSString *vastAd1=@"http://portalvhdsq3m25bf47d15c.blob.core.windows.net/vast/PlayerTestVAST.xml";
+            AdInfo *vastAdInfo1 = [[[AdInfo alloc] init] autorelease];
+            vastAdInfo1.clipURL = [NSURL URLWithString:vastAd1];
+            vastAdInfo1.mediaTime = [[[MediaTime alloc] init] autorelease];
+            vastAdInfo1.mediaTime.clipBeginMediaTime = 0;
+            vastAdInfo1.mediaTime.clipEndMediaTime = 10;
+            vastAdInfo1.policy = @"policy for late-binding VAST overlay ad";
+            vastAdInfo1.type = AdType_Midroll;
+            vastAdInfo1.appendTo=-1;
+            adIndex = 0;
+            if (![framework scheduleClip:vastAdInfo1 atTime:adLinearTime forType:PlaylistEntryType_VAST andGetClipId:&adIndex])
+            {
+                [self logFrameworkError];
+            }
+
+            //Example13: Schedule Pre Roll Ad
+            adURLString = @"http://wamsblureg001orig-hs.cloudapp.net/2e4e7d1f-b72a-4994-a406-810c796fc4fc/The%20Surface%20Movement-m3u8-aapl.ism/Manifest(format=m3u8-aapl)";
+            adInfo = [[[AdInfo alloc] init] autorelease];
+            adInfo.clipURL = [NSURL URLWithString:adURLString];
+            adInfo.mediaTime = [[[MediaTime alloc] init] autorelease];
+            adInfo.mediaTime.currentPlaybackPosition = 0;
+            adInfo.mediaTime.clipBeginMediaTime = 0; //You could play a portion of an Ad. Yeh!
+            adInfo.mediaTime.clipEndMediaTime = 10;
+            adInfo.policy = @"policy for pre-roll ad";
+            adInfo.appendTo = -1;
+            adInfo.type = AdType_Preroll;
+            adLinearTime.duration = 0;
+            if (![framework scheduleClip:adInfo atTime:adLinearTime forType:PlaylistEntryType_Media andGetClipId:&adIndex])
+            {
+                [self logFrameworkError];
+            }
+
+            //Example14: Schedule Pre Roll Ad pod
+            adURLString = @"http://wamsblureg001orig-hs.cloudapp.net/aa152d7f-3c54-487b-ba07-a58e0e33280b/wp-m3u8-aapl.ism/Manifest(format=m3u8-aapl)";
+            adInfo = [[[AdInfo alloc] init] autorelease];
+            adInfo.clipURL = [NSURL URLWithString:adURLString];
+            adInfo.mediaTime = [[[MediaTime alloc] init] autorelease];
+            adInfo.mediaTime.currentPlaybackPosition = 0;
+            adInfo.mediaTime.clipBeginMediaTime = 0; //You could play a portion of an Ad. Yeh!
+            adInfo.mediaTime.clipEndMediaTime = 10;
+            adInfo.policy = @"policy for pre-roll ad pod";
+            adInfo.appendTo = adIndex;
+            adInfo.type = AdType_Pod;
+            adLinearTime.duration = 0;
+            if (![framework scheduleClip:adInfo atTime:adLinearTime forType:PlaylistEntryType_Media andGetClipId:&adIndex])
+            {
+                [self logFrameworkError];
+            }
         }
         
         hasStarted = YES;
@@ -561,7 +656,7 @@ NSString * const MIME_TYPE_MP4 = @"video/mp4";
     adInfo.mediaTime.currentPlaybackPosition = 0;
     adInfo.mediaTime.clipBeginMediaTime = 0;
     adInfo.mediaTime.clipEndMediaTime = 5;
-    adInfo.policy = [[[PlaybackPolicy alloc] init] autorelease];
+    adInfo.policy = @"policy for scheduleNow ad";
     adInfo.appendTo = -1;
     
     LinearTime *adLinearTime = [[[LinearTime alloc] init] autorelease];
@@ -648,6 +743,14 @@ NSString * const MIME_TYPE_MP4 = @"video/mp4";
               nil != args.currentEntry ? args.currentEntry.clipURI : @"nil",
               args.currentPlaybackTime,
               nil != args.nextEntry ? args.nextEntry.clipURI : @"nil");
+        if (framework.player != nil)
+        {
+            NSLog(@"The current player is playing %@", ((AVURLAsset *)framework.player.currentItem.asset).URL);
+        }
+        else
+        {
+            NSLog(@"The current player is playing nil");
+        }
     }
     [currentEntry release];
     currentEntry = [args.nextEntry retain];
@@ -687,7 +790,7 @@ NSString * const MIME_TYPE_MP4 = @"video/mp4";
     NSString *time = [NSString stringWithFormat:@"%@ / %@", 
                       [self stringFromNSTimeInterval:args.seekbarTime.currentSeekbarPosition],
                       [self stringFromNSTimeInterval:args.seekbarTime.maxSeekbarPosition]];
-    
+ 
     [seekbarViewController updateTime:time];
     [seekbarViewController updateStatus:[NSString stringWithFormat:@"%@", stateText]];
     
@@ -719,11 +822,19 @@ NSString * const MIME_TYPE_MP4 = @"video/mp4";
     NSError *error = (NSError *)[userInfo objectForKey:PlayerSequencerErrorArgsUserInfoKey];
     NSLog(@"Error with domain name:%@, description:%@ and reason:%@", error.domain, error.localizedDescription, error.localizedFailureReason);
     
-    if (nil != currentEntry && currentEntry.isAdvertisement)
+    if ([[error.userInfo valueForKey:NSLocalizedFailureReasonErrorKey] rangeOfString:@"taken over by left DVR edge"].location != NSNotFound)
+    {
+        NSLog(@"WARNING: left DVR edge take cover the current position\n");
+        if (isPaused)
+        {
+            [self onPlayPauseButtonPressed];
+        }
+    }
+    else if (nil != currentEntry && currentEntry.isAdvertisement)
     {
         [framework skipCurrentPlaylistEntry];
     }
-    else
+    else if (nil != currentEntry)
     {
         [self onStopButtonPressed];
     }
@@ -790,11 +901,15 @@ NSString * const MIME_TYPE_MP4 = @"video/mp4";
     urlList = [[NSMutableArray alloc] init];
     
     [urlList addObject:@"http://wamsblureg001orig-hs.cloudapp.net/53bd66eb-8cba-43a8-99d2-1a2a47289fb4/The%20Making%20of%20Touch%20Cover%20for%20Surface-m3u8-aapl.ism/Manifest(format=m3u8-aapl)"];
+    [urlList addObject:@"http://man-w1/livehls.isml/manifest(format=m3u8-aapl)"];
+    [urlList addObject:@"http://aka.ms/M22dyn"];
+    [urlList addObject:@"http://harryjin4/hlslive.isml/manifest(format=m3u8-aapl)"];
     [urlList addObject:@"http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8"];
     
     currURL = 0;
     
     urlText.text = [urlList objectAtIndex:currURL];
+    isLive = NO;
    
     // Define the size of the seekbar based on whether the code is running on an iPad or an iPhone.
     if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone)

@@ -197,7 +197,7 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
                         entryFound.linearStartTime += playlistEntry.linearDuration;
                         entryFound.linearDuration -= playlistEntry.linearDuration;
                         entryFound.incrementSplitCount( privateMethodKey );
-                        entryFound.clipEndMediaTime = entryFound.clipBeginMediaTime + entryFound.linearDuration;
+                        entryFound.clipBeginMediaTime += playlistEntry.linearDuration;
                     }
 
                     playlist.splice(indexFound, 0, playlistEntry);
@@ -265,7 +265,7 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
                     entryFound.linearStartTime += playlistEntry.linearDuration;
                     entryFound.linearDuration -= playlistEntry.linearDuration;
                     entryFound.incrementSplitCount( privateMethodKey );
-                    entryFound.clipEndMediaTime = entryFound.clipBeginMediaTime + entryFound.linearDuration;
+                    entryFound.clipBeginMediaTime += playlistEntry.linearDuration;
                 }
                 playlist.unshift(playlistEntry);
             },
@@ -276,13 +276,14 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
                 ///<param name="playlistEntry" type="Object">The playlistEntry to be inserted after the specified entry.</param>
                 var i = indexFromId(idToFind, "insertEntryAfterId");
                 var entryAfter;
+                var entryBefore;
 
                 if (playlist[i].eClipType === "SeekToStart") {
                     throw new PLAYER_SEQUENCER.SchedulerError('insertEntryAfterId ' + idToFind.toString() + ' cannot be inserted after SeekToStart');
                 }
 
+                playlistEntry.linearStartTime = playlist[i].linearStartTime + playlist[i].linearDuration;
                 if (playlistEntry.linearDuration === 0) {
-                    playlistEntry.linearStartTime = playlist[i].linearStartTime + playlist[i].linearDuration;
                     playlist.splice(i + 1, 0, playlistEntry);
                 }
                 else {
@@ -292,13 +293,26 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
                     if (entryAfter.isAdvertisement) {
                         throw new PLAYER_SEQUENCER.SchedulerError('insertEntry overlay across another ad');
                     }
+                    entryBefore = playlist[i];
+                    if (entryBefore.eClipType === "VAST" && playlistEntry.eClipType === "Media" && entryBefore.linearDuration > 0)
+                    {
+                        // In this case we assume that this is a late-binding scenario and the scheduled clip is to
+                        // resolve the content of the VAST manifest. We don't allow a media ad following a VAST ad
+                        // in regular situation.
+                        playlistEntry.linearStartTime = entryBefore.linearStartTime;
+                        entryAfter.linearStartTime -= entryBefore.linearDuration;
+                        entryAfter.linearDuration += entryBefore.linearDuration;
+                        entryAfter.incrementSplitCount( privateMethodKey );
+                        entryAfter.clipBeginMediaTime -= entryBefore.linearDuration;
+                    }                    
+                    
                     if ( playlistEntry.linearDuration > entryAfter.linearDuration) {
                         throw new PLAYER_SEQUENCER.SchedulerError('insertEntry overlay beyond end of program content clip');
                     }
                     entryAfter.linearStartTime += playlistEntry.linearDuration;
                     entryAfter.linearDuration -= playlistEntry.linearDuration;
                     entryAfter.incrementSplitCount( privateMethodKey );
-                    entryAfter.clipEndMediaTime = entryFound.clipBeginMediaTime + entryFound.linearDuration;
+                    entryAfter.clipBeginMediaTime += playlistEntry.linearDuration;
                     playlist.splice(i + 1, 0, playlistEntry);
                 }
             },
@@ -356,7 +370,7 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
                 }
                 // handle overlay ads by adjusting start times of any following ads and the
                 // next overlaid main content item and the main content item duration.
-                if (i > 0 && i < playlist.length && playlist[i -1].startTime + playlist[i - 1].linearDuration < playlist[i].startTime) {
+                if (i > 0 && i < playlist.length && playlist[i -1].linearStartTime + playlist[i - 1].linearDuration < playlist[i].linearStartTime) {
                     // There is a gap in the linear timeline. This can happen when the removed overlay ad covers the first part of the main content
                     if (playlist[i].linearDuration === 0) {
                         throw new PLAYER_SEQUENCER.SchedulerError( 'overlay ad removed should not be followed by another pause timeline true ad' );
@@ -364,7 +378,7 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
                     if (objRemoved.linearDuration === 0) {
                         throw new PLAYER_SEQUENCER.SchedulerError('removing a pause time true ad should not introduce gaps in the linear timeline');
                     }
-                    playlist[i].startTime -= objRemoved.linearDuration;
+                    playlist[i].linearStartTime -= objRemoved.linearDuration;
                     playlist[i].clipBeginMediaTime -= objRemoved.linearDuration;
                     playlist[i].incrementSplitCount( privateMethodKey );                    
                 }
@@ -375,6 +389,78 @@ PLAYER_SEQUENCER.createSequentialPlaylist = function () {
                 ///<summary>Remove all entries from the playList.</summary>
                 playlist = [];
                 playlistDuration = 0;
+            },
+
+            removeEntriesBeforeTime: function (startTime) {
+                ///<summary>Remove all entries before a certain start time.</summary>
+                ///<param name="startTime" type="Number">The start time for playlist. Any entries before this time except preroll ads should be removed.</param>
+                var i = 0;
+                
+                // Skip all the preroll ads and seekToStart entry
+                while (i < playlist.length && playlist[i].isAdvertisement && playlist[i].linearDuration === 0) {
+                    i += 1;
+                }
+
+                if (i < playlist.length && playlist[i].eClipType === 'SeekToStart') {
+                    i += 1;
+                }
+
+                // Trim the playlist for anything beyond the end time
+                while (i < playlist.length && playlist[i].linearStartTime < startTime) {
+                    if (playlist[i].linearStartTime + playlist[i].linearDuration <= startTime) {
+                        // The entry is totally before the start time, remove it
+                        playlist.splice(i, 1);
+                    }
+                    else {
+                        // The start time is in the middle of the entry, update its linear duration and start time
+                        playlist[i].linearDuration -= startTime - playlist[i].linearStartTime;
+                        playlist[i].clipBeginMediaTime += startTime - playlist[i].linearStartTime;
+                        playlist[i].linearStartTime = startTime;
+                        playlist[i].incrementSplitCount(privateMethodKey);
+                        break;
+                    }
+                }
+            },
+
+            removeEntriesAfterTime: function (endTime) {
+                ///<summary>Remove all entries before a certain start time.</summary>
+                ///<param name="endTime" type="Number">The end time for playlist. Any entries after this time except post-roll ads should be removed.</param>
+                var i = playlist.length - 1;
+                
+                // Skip through all the post roll ads but unpdates their linear time
+                while (i >= 0 && playlist[i].isAdvertisement && playlist[i].linearDuration === 0) {
+                    playlist[i].linearStartTime = endTime;
+                    playlist[i].incrementSplitCount( privateMethodKey );                    
+                    i -= 1;
+                }
+
+                if (i < 0) {
+                    return;
+                }
+
+                // Just in case that the end time is expanded, update the duration of the last main or overlay ad
+                if (playlist[i].linearStartTime + playlist[i].linearDuration <= endTime) {
+                    playlist[i].linearDuration = endTime - playlist[i].linearStartTime;
+                    playlist[i].incrementSplitCount( privateMethodKey );                    
+                    return;
+                }
+
+                // Trim the playlist for anything beyond the end time
+                while (i >= 0 && playlist[i].linearStartTime + playlist[i].linearDuration > endTime) {
+                    if (playlist[i].linearStartTime >= endTime) {
+                        // The entry is totally beyond the end time, remove it
+                        playlist.splice(i, 1);
+                    }
+                    else {
+                        // The end time is in the middle of the entry, update its linear duration
+                        playlist[i].linearDuration = endTime - playlist[i].linearStartTime;
+                        playlist[i].clipEndMediaTime = playlist[i].clipBeginMediaTime + playlist[i].linearDuration;
+                        playlist[i].incrementSplitCount( privateMethodKey );                    
+                        break;
+                    }
+
+                    i -= 1;
+                }
             }
         }, // end of change methods
 
@@ -575,10 +661,12 @@ PLAYER_SEQUENCER.createScheduler = function (sequentialPlaylist) {
 
             switch (params.eRollType) {
                 case 'Pre':
+                    playlistEntry.linearDuration = 0;
                     mySequentialPlaylist.insertEntryBeforeBeginning(playlistEntry);
                     break;
 
                 case 'Post':
+                    playlistEntry.linearDuration = 0;
                     mySequentialPlaylist.insertEntryAfterEnd(playlistEntry);
                     break;
 

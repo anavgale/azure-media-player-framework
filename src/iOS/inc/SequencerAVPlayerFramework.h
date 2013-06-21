@@ -23,6 +23,8 @@
 #define FRAMEWORK_LOG(format, ...)
 #endif
 
+#define LIVE_END (NSTimeInterval)INT_MAX
+
 @class AVPlayer;
 @class Sequencer;
 @class Scheduler;
@@ -69,6 +71,7 @@
 {
 @private
     AVPlayer *player;
+    AVPlayer *livePlayer;
     Sequencer *sequencer;
     PlaybackSegment *currentSegment;
     PlaybackSegment *nextSegment;
@@ -79,6 +82,15 @@
     int32_t timerCount;
     BOOL isStopped;
     BOOL resetView;
+    BOOL isLive;
+    BOOL hasStarted;
+    BOOL hasStartedAfterStop;
+    BOOL isSeekingAVPlayer;
+    NSTimeInterval leftDvrEdge;
+    NSTimeInterval livePosition;
+    NSTimeInterval livePositionDelta;
+    NSTimeInterval currentPlaylistEntryPosition;
+    NSTimeInterval initialPlaybackPosition;
     NSError *lastError;
     id appDelegate;
 }
@@ -93,6 +105,7 @@
 
 - (id) initWithView:(UIView *)videoView;
 - (BOOL) play;
+- (BOOL) playAtTime:(NSTimeInterval)linearTime;
 - (void) pause;
 - (BOOL) stop;
 - (BOOL) seekToTime:(NSTimeInterval)seekTime;

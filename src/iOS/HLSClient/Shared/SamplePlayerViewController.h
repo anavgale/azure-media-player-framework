@@ -36,6 +36,7 @@
     BOOL isPaused;
     BOOL hasStarted;
     BOOL isReady;
+    BOOL isLive;
     
     int currURL;
     NSMutableArray *urlList;

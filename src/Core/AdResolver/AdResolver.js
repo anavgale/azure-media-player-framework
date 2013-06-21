@@ -233,7 +233,8 @@ PLAYER_SEQUENCER.theAdResolver = (function () {
                             resultObj.elements = childEltNames.length;
                         }
                     } else {
-                        // give value of first Text element that is not just a newline // TODO: should be: is not just white space
+                        // give value of first Text element that is not just a newline
+                        // for now only newline is ignored. We may consider to ignore all the white spaces in the future.
                         for (contentIndex = 0; contentIndex < eltNode.childNodes.length; contentIndex += 1) {
                             if (Text.prototype.isPrototypeOf(eltNode.childNodes[contentIndex])) {
                                 if (eltNode.childNodes[contentIndex].nodeValue !== '\n') {
@@ -553,7 +554,7 @@ PLAYER_SEQUENCER.theAdResolver = (function () {
             getAdSource: function (params) {
                 ///<summary>Get the AdSource item for a given AdBreak</summary>
                 ///<param name="params" type="Object">An object with "entryId" (result of the createEntry function) and "adBreakOrdinal" (index into AdBreakList)</param>
-                ///<returns type="Object">An Object containing: {type:(enum VASTData,CustomAdData,AdTagURI),attrs:{set of attribute name:value pairs},value</returns>
+                ///<returns type="Object">An Object containing: {type:(enum VASTAdData,CustomAdData,AdTagURI),attrs:{set of attribute name:value pairs},value</returns>
                 var entry = myAdResolverEntryPool.getEntryFromId(params.entryId),
                     adBreakIndex = params.adBreakOrdinal || 0,
                     docNode = myDocNodeFromElementPath(entry.parsedDocument, ['VMAP', 'AdBreak:' + adBreakIndex.toString()]);
@@ -562,7 +563,7 @@ PLAYER_SEQUENCER.theAdResolver = (function () {
             },
 
             createVASTEntryFromAdBreak: function (params) {
-                ///<summary>Create a VASTEntry for a given AdBreak which is assumed to contain an AdSource/VASTData element.</summary>
+                ///<summary>Create a VASTEntry for a given AdBreak which is assumed to contain an AdSource/VASTAdData element.</summary>
                 ///<param name="params" type="Object">An object with "entryId" (result of the createEntry function) and "adBreakOrdinal" (index into AdBreakList)</param>
                 ///<returns type="Number">A VASTEntry idNumber</returns>
                 var entry = myAdResolverEntryPool.getEntryFromId(params.entryId),
@@ -574,7 +575,7 @@ PLAYER_SEQUENCER.theAdResolver = (function () {
                             'VMAP', 
                             'AdBreak:' + adBreakIndex.toString(), 
                             'AdSource', 
-                            'VASTData'
+                            'VASTAdData'
                         ]);
 
                 return publicAPI.vast.createEntry(docNode);

@@ -15,7 +15,6 @@
 
 #import <Foundation/Foundation.h>
 
-#import "PlaybackPolicy.h"
 #import "PlaylistEntry.h"
 
 typedef enum
@@ -31,7 +30,7 @@ typedef enum
 @private
     NSURL* clipURL;
     MediaTime *mediaTime;
-    PlaybackPolicy* policy;
+    NSString *policy;
     BOOL deleteAfterPlayed;
     AdType type;
     int32_t appendTo;
@@ -39,7 +38,7 @@ typedef enum
 
 @property(nonatomic, retain) NSURL* clipURL;
 @property(nonatomic, retain) MediaTime* mediaTime;
-@property(nonatomic, retain) PlaybackPolicy* policy;
+@property(nonatomic, retain) NSString *policy;
 @property(nonatomic, assign) BOOL deleteAfterPlayed;
 @property(nonatomic, assign) AdType type;
 @property(nonatomic, assign) int32_t appendTo;

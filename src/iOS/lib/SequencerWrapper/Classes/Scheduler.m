@@ -91,7 +91,7 @@
     assert (nil != clipId);
     NSString *result = nil;
 
-    // TODO: ignore the playback policy object for now
+    // playback policy object is ignored for now. The app is responsible to set and enforce playback policy
     NSString *eRollType = nil;
     switch (ad.type) {
         case AdType_Preroll:
@@ -144,6 +144,7 @@
                           "\\\"startTime\\\": %f, "
                           "\\\"linearDuration\\\": %f, "
                           "\\\"deleteAfterPlayed\\\": %s, "
+                          "\\\"playbackPolicyObj\\\": \\\"%@\\\", "
                           "\\\"eRollType\\\": \\\"%@\\\", "
                           "\\\"appendTo\\\": %d } }\")",
                           [[ad.clipURL absoluteString] cStringUsingEncoding:NSUTF8StringEncoding],
@@ -153,6 +154,7 @@
                           linearTime.startTime,
                           linearTime.duration,
                           ad.deleteAfterPlayed ? "true" : "false",
+                          ad.policy,
                           eRollType,
                           ad.appendTo] autorelease];
     result = [self callJavaScriptWithString:function];

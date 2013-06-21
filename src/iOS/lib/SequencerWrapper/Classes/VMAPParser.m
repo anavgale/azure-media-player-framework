@@ -98,9 +98,9 @@
     
     AdSource *adSource = [[AdSource alloc] init];
     NSString *type = [json_out objectForKey:@"type"];
-    if ([type isEqualToString:@"VASTData"])
+    if ([type isEqualToString:@"VASTAdData"])
     {
-        adSource.type = VASTData;
+        adSource.type = VASTAdData;
     }
     else if ([type isEqualToString:@"CustomAdData"])
     {
@@ -314,7 +314,7 @@
 }
 
 //
-// create a VASTEntry for a given AdBreak which is assumed to contain an AdSource/VASTData element.
+// create a VASTEntry for a given AdBreak which is assumed to contain an AdSource/VASTAdData element.
 //
 // Arguments:
 // [vastId]: the output VAST entry Id

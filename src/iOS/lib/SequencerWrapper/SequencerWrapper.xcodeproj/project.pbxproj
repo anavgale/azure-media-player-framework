@@ -26,7 +26,6 @@
 		329DB92A16110984004C6873 /* AdInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = 329DB92916110984004C6873 /* AdInfo.m */; };
 		329DB92C16110993004C6873 /* AdResolver.m in Sources */ = {isa = PBXBuildFile; fileRef = 329DB92B16110993004C6873 /* AdResolver.m */; };
 		329DB92E161109C8004C6873 /* LinearTime.m in Sources */ = {isa = PBXBuildFile; fileRef = 329DB92D161109C8004C6873 /* LinearTime.m */; };
-		329DB932161109EA004C6873 /* PlaybackPolicy.m in Sources */ = {isa = PBXBuildFile; fileRef = 329DB931161109EA004C6873 /* PlaybackPolicy.m */; };
 		329DB93416110A0B004C6873 /* PlaybackSegment.m in Sources */ = {isa = PBXBuildFile; fileRef = 329DB93316110A0B004C6873 /* PlaybackSegment.m */; };
 		329DB93616110A17004C6873 /* PlaylistEntry.m in Sources */ = {isa = PBXBuildFile; fileRef = 329DB93516110A17004C6873 /* PlaylistEntry.m */; };
 		329DB93816110A24004C6873 /* Scheduler.m in Sources */ = {isa = PBXBuildFile; fileRef = 329DB93716110A24004C6873 /* Scheduler.m */; };
@@ -67,7 +66,6 @@
 		329DB92916110984004C6873 /* AdInfo.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = AdInfo.m; path = Classes/AdInfo.m; sourceTree = "<group>"; };
 		329DB92B16110993004C6873 /* AdResolver.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = AdResolver.m; path = Classes/AdResolver.m; sourceTree = "<group>"; };
 		329DB92D161109C8004C6873 /* LinearTime.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = LinearTime.m; path = Classes/LinearTime.m; sourceTree = "<group>"; };
-		329DB931161109EA004C6873 /* PlaybackPolicy.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = PlaybackPolicy.m; path = Classes/PlaybackPolicy.m; sourceTree = "<group>"; };
 		329DB93316110A0B004C6873 /* PlaybackSegment.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = PlaybackSegment.m; path = Classes/PlaybackSegment.m; sourceTree = "<group>"; };
 		329DB93516110A17004C6873 /* PlaylistEntry.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = PlaylistEntry.m; path = Classes/PlaylistEntry.m; sourceTree = "<group>"; };
 		329DB93716110A24004C6873 /* Scheduler.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = Scheduler.m; path = Classes/Scheduler.m; sourceTree = "<group>"; };
@@ -110,7 +108,6 @@
 				329DB93716110A24004C6873 /* Scheduler.m */,
 				329DB93516110A17004C6873 /* PlaylistEntry.m */,
 				329DB93316110A0B004C6873 /* PlaybackSegment.m */,
-				329DB931161109EA004C6873 /* PlaybackPolicy.m */,
 				329DB92D161109C8004C6873 /* LinearTime.m */,
 				329DB92B16110993004C6873 /* AdResolver.m */,
 				329DB92916110984004C6873 /* AdInfo.m */,
@@ -161,7 +158,7 @@
 		329DB90F1611049B004C6873 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0440;
+				LastUpgradeCheck = 0460;
 				ORGANIZATIONNAME = "Microsoft Corporation";
 			};
 			buildConfigurationList = 329DB9121611049B004C6873 /* Build configuration list for PBXProject "SequencerWrapper" */;
@@ -206,7 +203,6 @@
 				329DB93816110A24004C6873 /* Scheduler.m in Sources */,
 				329DB93616110A17004C6873 /* PlaylistEntry.m in Sources */,
 				329DB93416110A0B004C6873 /* PlaybackSegment.m in Sources */,
-				329DB932161109EA004C6873 /* PlaybackPolicy.m in Sources */,
 				329DB92E161109C8004C6873 /* LinearTime.m in Sources */,
 				329DB92C16110993004C6873 /* AdResolver.m in Sources */,
 				329DB92A16110984004C6873 /* AdInfo.m in Sources */,
@@ -222,6 +218,9 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -249,6 +248,9 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;

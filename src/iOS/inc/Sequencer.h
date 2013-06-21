@@ -34,11 +34,14 @@
 @property(nonatomic, retain) AdResolver *adResolver;
 @property(nonatomic, retain) Scheduler *scheduler;
 @property(nonatomic, retain) NSError *lastError;
+@property(nonatomic, readonly) BOOL isReady;
 
 - (id)init;
-- (BOOL) getSeekbarTime:(SeekbarTime **)seekTime andPlaybackPolicy:(PlaybackPolicy **)policy withMediaTime:(MediaTime *)aMediaTime playbackRate:(double)aRate currentSegment:(PlaybackSegment *)aSegment playbackRangeExceeded:(BOOL *)rangeExceeded;
+- (BOOL) getSeekbarTime:(SeekbarTime **)seekTime andPlaybackPolicy:(NSString **)policy withMediaTime:(MediaTime *)aMediaTime playbackRate:(double)aRate currentSegment:(PlaybackSegment *)aSegment playbackRangeExceeded:(BOOL *)rangeExceeded;
+- (BOOL) getSeekbarTime:(SeekbarTime **)seekTime andPlaybackPolicy:(NSString **)policy withMediaTime:(MediaTime *)aMediaTime playbackRate:(double)aRate currentSegment:(PlaybackSegment *)aSegment playbackRangeExceeded:(BOOL *)rangeExceeded leftDvrEdge:(NSTimeInterval)leftDvrEdge livePosition:(NSTimeInterval)livePosition liveEnded:(BOOL)liveEnded;
 - (BOOL) getLinearTime:(NSTimeInterval *)linearTime withMediaTime:(MediaTime *)aMediaTime currentSegment:(PlaybackSegment *)aSegment;
 - (BOOL) getSegmentAfterSeek:(PlaybackSegment **)seekSegment withLinearPosition:(NSTimeInterval)linearSeekPosition;
+- (BOOL) getSegmentAfterSeek:(PlaybackSegment **)seekSegment withLinearPosition:(NSTimeInterval)linearSeekPosition leftDvrEdge:(NSTimeInterval)leftDvrEdge livePosition:(NSTimeInterval)livePosition;
 - (BOOL) getSegmentAfterSeek:(PlaybackSegment **)seekSegment withSeekbarPosition:(SeekbarTime *)seekbarPosition currentSegment:(PlaybackSegment *)aSegment;
 - (BOOL) getSegmentOnEndOfMedia:(PlaybackSegment **)nextSegment withCurrentSegment:(PlaybackSegment *)currentSegment mediaTime:(NSTimeInterval)playbackPosition currentPlaybackRate:(double)playbackRate isNotPlayed:(BOOL)isNotPlayed isEndOfSequence:(BOOL)isEndOfSequence;
 - (BOOL) getSegmentOnEndOfBuffering:(PlaybackSegment **)nextSegment withCurrentSegment:(PlaybackSegment *)currentSegment mediaTime:(NSTimeInterval)playbackPosition currentPlaybackRate:(double)playbackRate;

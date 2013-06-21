@@ -34,6 +34,10 @@
 #define TIMER_INTERVALS_PER_NOTIFICATION 5
 #define NUM_OF_VIEWS 3
 #define JAVASCRIPT_LOADING_POLLING_INTERVAL 0.05
+#define LIVE_POSITION_ERROR_MARGIN_IN_SEC 0.1
+
+NSString * const FrameworkErrorDomain = @"PLAYER_FRAMEWORK";
+NSString * const FrameworkUnexpectedError = @"PLAYER_FRAMEWORK:UnexpectedError";
 
 NSString * const SeekbarTimeUpdatedNotification = @"SeekbarTimeUpdatedNotification";
 NSString * const SeekbarTimeUpdatedArgsUserInfoKey = @"SeekbarTimeUpdatedArgs";
@@ -285,6 +289,7 @@ NSString *kStatusKey = @"status";
                         adInfo.mediaTime = [[[MediaTime alloc] init] autorelease];
                         adInfo.mediaTime.clipBeginMediaTime = 0;
                         adInfo.mediaTime.clipEndMediaTime = creative.duration;
+                        adInfo.appendTo = ad.sequence;
                         
                         if (-1 == ad.sequence)
                         {
@@ -395,9 +400,11 @@ NSString *kStatusKey = @"status";
             }
         }];
         
-        // schedule the first ad in the pod
         int32_t entryId;
         AdInfo *ad = nil;
+        LinearTime *adLinearTime = [[[LinearTime alloc] init] autorelease];
+        adLinearTime.startTime = linearTime.startTime;
+        NSTimeInterval totalLinearDuration = linearTime.duration;
 
         // Schedule all the ads in the pod
         for (int32_t adIndex = 0; adIndex < [sortedArray count] && 0 < totalDuration; ++adIndex)
@@ -413,6 +420,16 @@ NSString *kStatusKey = @"status";
             
             totalDuration -= adDuration;
             
+            if (linearTime.duration > 0 && adDuration > totalLinearDuration)
+            {
+                adDuration -= (adDuration - totalLinearDuration);
+                totalDuration = 0;
+            }
+            if (linearTime.duration > 0)
+            {
+                adLinearTime.duration = adDuration;
+            }
+            
             if (0 == adIndex)
             {
                 ad.type = baseAd.type;
@@ -426,13 +443,15 @@ NSString *kStatusKey = @"status";
             
             ad.policy = baseAd.policy;
             ad.deleteAfterPlayed = baseAd.deleteAfterPlayed;
-                        
-            success = [sequencer.scheduler scheduleClip:ad atTime:linearTime forType:PlaylistEntryType_Media andGetClipId:&entryId];
+            
+            success = [sequencer.scheduler scheduleClip:ad atTime:adLinearTime forType:PlaylistEntryType_Media andGetClipId:&entryId];
             if (!success)
             {
                 self.lastError = sequencer.scheduler.lastError;
                 break;
             }
+            
+            adLinearTime.startTime += adDuration;
             
             if (nil != clipId && 0 == adIndex)
             {
@@ -444,6 +463,152 @@ NSString *kStatusKey = @"status";
     
     return success;
 }
+ 
+- (void) updateLiveInfo
+{
+    if (!isLive)
+    {
+        return;
+    }
+    
+    AVPlayer *avPlayer = self.player;
+    if (currentSegment != nil && currentSegment.clip.isAdvertisement)
+    {
+        avPlayer = livePlayer;
+    }
+    else
+    {
+        livePlayer = self.player;
+    }
+
+    if (nil != avPlayer)
+    {
+        AVPlayerItem *currentItem = avPlayer.currentItem;
+        NSArray *loadedRanges = currentItem.seekableTimeRanges;
+        if (loadedRanges.count > 0)
+        {
+            CMTimeRange range = [[loadedRanges objectAtIndex:0] CMTimeRangeValue];
+            leftDvrEdge = CMTimeGetSeconds(range.start);
+            livePosition = leftDvrEdge + CMTimeGetSeconds(range.duration);
+        }
+    }
+    
+    NSTimeInterval timeNow = [self getCurrentTimeInSeconds];
+    
+    if (!hasStarted && currentSegment != nil && !currentSegment.clip.isAdvertisement)
+    {
+        // This is the first call the updateLive Info
+        // We will remember the delta between the system time and the live position
+        livePositionDelta = livePosition - timeNow;
+    }
+    else
+    {
+        NSTimeInterval calculatedLivePosition = livePositionDelta + timeNow;
+        if (fabs(calculatedLivePosition - livePosition) >= LIVE_POSITION_ERROR_MARGIN_IN_SEC)
+        {
+            // There could be a discontinuity in the playback session (such as stop the player)
+            // Or it could be just live position is not updated yet. In any case the calculated time
+            // is more accurate
+            leftDvrEdge += calculatedLivePosition - livePosition;
+            livePosition = calculatedLivePosition;
+        }
+        else
+        {
+            // The live position from AVPlayer is accurate
+            // We should update the live position delta to avoid clock drift
+            livePositionDelta = livePosition - timeNow;
+        }
+    }
+}
+
+- (NSTimeInterval) getCurrentTimeInSeconds
+{
+    // returns the time interval between now and Jan 1, 2001, GMT.
+    return [NSDate timeIntervalSinceReferenceDate];
+}
+
+- (BOOL) getHLSContentDuration:(NSTimeInterval *)duration andIsLiveStream:(BOOL *)isLiveStream fromURL:(NSURL *)clipURL
+{
+    NSMutableString *manifest = nil;
+    BOOL success = NO;
+    *duration = 0;
+    *isLiveStream = NO;
+
+    do
+    {
+        if (![self.adResolver downloadManifest:&manifest withURL:clipURL])
+        {
+            self.lastError = self.adResolver.lastError;
+            break;
+        }
+        
+        manifest = [NSMutableString stringWithString:[manifest stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"\r\n "]]];
+        NSArray *components = [manifest componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" \r\n/"]];
+        if (0 == components.count || ![[components objectAtIndex:0] isEqualToString:@"#EXTM3U"])
+        {
+            NSMutableDictionary *userInfo = [[NSMutableDictionary alloc] init];
+            [userInfo setObject:FrameworkUnexpectedError forKey:NSLocalizedDescriptionKey];
+            [userInfo setObject:@"The manifest is not a valid m3u8 playlist" forKey:NSLocalizedFailureReasonErrorKey];
+            self.lastError = [NSError errorWithDomain:FrameworkErrorDomain code:0 userInfo:userInfo];
+            [userInfo release];
+            break;
+        }
+        
+        NSString *qualityLevels = nil;
+        for (NSString *element in components)
+        {
+            NSRange range = [element rangeOfString:@"QualityLevels("];
+            if (range.location == 0 && range.length == 14)
+            {
+                qualityLevels = element;
+                break;
+            }
+        }
+        
+        if (nil != qualityLevels)
+        {
+            // This is a top level playlist, we need to download the individual playlist
+            NSString *lastComponent = [clipURL lastPathComponent];
+            NSURL *playlistURL = [[[clipURL URLByDeletingLastPathComponent] URLByAppendingPathComponent:qualityLevels] URLByAppendingPathComponent:lastComponent];
+            if (![self.adResolver downloadManifest:&manifest withURL:playlistURL])
+            {
+                self.lastError = self.adResolver.lastError;
+                break;
+            }
+            
+            components = [manifest componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" \r\n/"]];
+        }
+
+        // Adding all the durations of the segments in the playlist
+        // which has the form #EXTINF:<duration>
+        *isLiveStream = YES;
+        for (NSString *element in components)
+        {
+            NSRange range = [element rangeOfString:@"#EXTINF:"];
+            if (range.location != NSNotFound && range.length == 8)
+            {
+                NSTimeInterval segmentDuration = 0;
+                if ([[NSScanner scannerWithString:[element substringFromIndex:8]] scanDouble:&segmentDuration])
+                {
+                    *duration += segmentDuration;
+                }
+            }
+            else
+            {
+                range = [element rangeOfString:@"EXT-X-ENDLIST"];
+                if (range.location != NSNotFound && range.length == 13)
+                {
+                    *isLiveStream = NO;
+                }
+            }
+        }
+        
+        success = YES;
+    } while (NO);
+    
+    return success;
+}
+
 
 #pragma mark -
 #pragma mark Instance methods:
@@ -487,6 +652,12 @@ NSString *kStatusKey = @"status";
 
         isStopped = YES;
         resetView = NO;
+        isLive = NO;
+        hasStarted = NO;
+        hasStartedAfterStop = NO;
+        isSeekingAVPlayer = NO;
+        initialPlaybackPosition = 0;
+        livePlayer = nil;
         loadingTimer = [[NSTimer scheduledTimerWithTimeInterval:JAVASCRIPT_LOADING_POLLING_INTERVAL target:self selector:@selector(loadTimer:) userInfo:NULL repeats:NO] retain];
     }
     
@@ -542,10 +713,7 @@ NSString *kStatusKey = @"status";
                 {
                     break;
                 }
-               
-                // Send notification for seek bar time update
-                [self sendPlaylistEntryChangedNotificationForCurrentEntry:nil nextEntry:nextSegment.clip atTime:0];
-                
+
                 rate = nextSegment.initialPlaybackRate;
                 
                 nextSegment.viewIndex = 0;
@@ -573,6 +741,21 @@ NSString *kStatusKey = @"status";
     } while (NO);
     
     return success;
+}
+
+//
+// play the contents in the playlist using the framework.
+//
+// Arguments:
+// [linearTime]    The position to start the playback at the linear timeline.
+//
+// Returns: YES for success and NO for failure.
+//
+- (BOOL) playAtTime:(NSTimeInterval)linearTime
+{    
+    initialPlaybackPosition = linearTime;
+    
+    return [self play];    
 }
 
 //
@@ -604,6 +787,9 @@ NSString *kStatusKey = @"status";
     if (!isStopped)
     {
         isStopped = YES;
+        hasStartedAfterStop = NO;
+        initialPlaybackPosition = 0;
+        livePlayer = nil;
         resetView = NO;
         PlaybackSegment *segmentToRemove = nil;
         if (PlayerStatus_Playing != currentSegment.status)
@@ -693,7 +879,8 @@ NSString *kStatusKey = @"status";
                         }
                     }
                     segment.status = PlayerStatus_Stopped;
-                    resetView = YES;
+                    // always reset the current view unless it is live content transition from main to ad.
+                    resetView = !(isLive && !(currentSegment.clip.isAdvertisement) && segment.clip.isAdvertisement);
                     self.nextSegment = segment;
                     if (![self contentFinished:YES])
                     {
@@ -741,7 +928,7 @@ NSString *kStatusKey = @"status";
 //
 // Arguments:
 // [ad]: The ad clip to be scheduled
-// [linearTime]: The time when the ad should be played in the linear timeline
+// [linearTime]: The time when the ad should be played in the linear timeline. Note that this is an upper bound if content duration is not specified.
 // [type]: The type of the ad
 // [clipId]: The output clipId for the scheduled clip
 //
@@ -756,12 +943,56 @@ NSString *kStatusKey = @"status";
         [self setNULLSequencerSchedulerError];
     }
     else
-    {
-        success = [sequencer.scheduler scheduleClip:ad atTime:linearTime forType:type andGetClipId:clipId];
-        if (!success)
+    {        
+        do
         {
-            self.lastError = sequencer.scheduler.lastError;
-        }
+            if (ad.mediaTime.clipEndMediaTime < 0)
+            {
+                // The duration of the content is unknown. Need to download the playlist to figure out duration.
+                NSTimeInterval duration = 0;
+                BOOL isLiveStream = NO;
+                
+                if (![self getHLSContentDuration:&duration andIsLiveStream:&isLiveStream fromURL:ad.clipURL])
+                {
+                    break;
+                }
+                
+                if (isLiveStream)
+                {
+                    // Live stream can't be used as an ad clip
+                    NSMutableDictionary *userInfo = [[NSMutableDictionary alloc] init];
+                    [userInfo setObject:FrameworkUnexpectedError forKey:NSLocalizedDescriptionKey];
+                    [userInfo setObject:@"Live stream cannot be used as a clip source" forKey:NSLocalizedFailureReasonErrorKey];
+                    self.lastError = [NSError errorWithDomain:FrameworkErrorDomain code:0 userInfo:userInfo];
+                    [userInfo release];
+                    break;
+                }
+                
+                ad.mediaTime.clipEndMediaTime = duration;
+                
+                if (0 != linearTime.duration)
+                {
+                    NSTimeInterval contentDuration = ad.mediaTime.clipEndMediaTime - ad.mediaTime.clipBeginMediaTime;
+                    if (contentDuration < linearTime.duration)
+                    {
+                        // The app specified linear duration is too long for the clip
+                        // correct the linear duration
+                        linearTime.duration = contentDuration;                        
+                    }
+                    else
+                    {
+                        // The content length exceeds the linear duration specified by the app. Clip the content.
+                        ad.mediaTime.clipEndMediaTime = ad.mediaTime.clipBeginMediaTime + linearTime.duration;
+                    }
+                }
+            }
+            
+            success = [sequencer.scheduler scheduleClip:ad atTime:linearTime forType:type andGetClipId:clipId];
+            if (!success)
+            {
+                self.lastError = sequencer.scheduler.lastError;
+            }
+        } while (NO);
     }
     
     return success;
@@ -884,7 +1115,7 @@ NSString *kStatusKey = @"status";
                     NSTimeInterval totalDuration = 0;
                     switch (adSource.type)
                     {
-                        case VASTData:
+                        case VASTAdData:
                             success = [self.adResolver.vmapParser createVASTEntryFromAdBreak:&vastEntryId withEntryId:vmapEntryId adBreakOrdinal:adBreakId];
                             if (!success)
                             {
@@ -961,7 +1192,10 @@ NSString *kStatusKey = @"status";
                             {
                                 baseAd.type = AdType_Postroll;
                             }
-                            baseAd.type = AdType_Midroll;
+                            else
+                            {
+                                baseAd.type = AdType_Midroll;
+                            }
                             totalDuration = 0;
                             for (AdInfo *ad in adPodArray)
                             {
@@ -1079,7 +1313,7 @@ NSString *kStatusKey = @"status";
 //
 // Arguments:
 // [clipURL]: The URL of the clip to be appended
-// [mediaTime]: The minimum and maximum rendering time in the media time
+// [mediaTime]: The minimum and maximum rendering time in the media time. Set mediaTime.clipEndMediaTime to negative if the clip duration is unknown.
 // [clipId]: The output clipId for the content that is appended
 //
 // Returns: YES for success and NO for failure
@@ -1094,11 +1328,37 @@ NSString *kStatusKey = @"status";
     }
     else
     {
-        success = [sequencer.scheduler appendContentClip:clipURL withMediaTime:mediaTime andGetClipId:clipId];
-        if (!success)
+        do
         {
-            self.lastError = sequencer.scheduler.lastError;
-        }
+            if (mediaTime.clipEndMediaTime < 0)
+            {
+                // The duration of the content is unknown. Need to download the playlist to figure out duration.
+                NSTimeInterval duration = 0;
+                BOOL isLiveStream = NO;
+                
+                if (![self getHLSContentDuration:&duration andIsLiveStream:&isLiveStream fromURL:clipURL])
+                {
+                    break;
+                }
+                
+                isLive = isLiveStream;
+                
+                if (isLive)
+                {
+                    mediaTime.clipEndMediaTime = LIVE_END;
+                }
+                else
+                {
+                    mediaTime.clipEndMediaTime = duration;
+                }
+            }
+            
+            success = [sequencer.scheduler appendContentClip:clipURL withMediaTime:mediaTime andGetClipId:clipId];
+            if (!success)
+            {
+                self.lastError = sequencer.scheduler.lastError;
+            }
+        } while (NO);
     }
     
     return success;
@@ -1165,8 +1425,7 @@ NSString *kStatusKey = @"status";
             // Switch from ad to main content. All we need to do is to resume.
             // Delay the resumption until the view switches
             // One exception is for preroll ad we need to create the player for the main content
-            // TODO: pauseTimeLine false ad requires a seek
-            
+            // Also pauseTimeLine false ad requires a seek
             BOOL foundMainView = NO;
             AVPlayerLayerView *mainView = nil;
             for (AVPlayerLayerView *playerLayerView in avPlayerViews)
@@ -1203,9 +1462,10 @@ NSString *kStatusKey = @"status";
                     AVPlayerLayerView *nextView = [avPlayerViews objectAtIndex:nextSegment.viewIndex];
                     AVPlayer *moviePlayer = nextView.player;
 
-                    NSTimeInterval resumeTime = currentSegment.clip.linearTime.startTime + currentSegment.clip.linearTime.duration;
+                    NSTimeInterval resumeTime = nextSegment.initialPlaybackTime;
                     CMTime targetTime = CMTimeMakeWithSeconds(resumeTime, NSEC_PER_SEC);
                     [moviePlayer seekToTime:targetTime];
+                    isSeekingAVPlayer = YES;
                 }
                 // otherwise only need to resume the main content and no need to load
                 nextSegment.status = PlayerStatus_Ready;
@@ -1352,6 +1612,9 @@ NSString *kStatusKey = @"status";
                                              selector:@selector(playerItemDidReachEnd:)
                                                  name:AVPlayerItemDidPlayToEndTimeNotification
                                                object:moviePlayer.currentItem];
+
+    // Send the playlist entry changed notification
+    [self sendPlaylistEntryChangedNotificationForCurrentEntry:((nil == currentSegment) ? nil : currentSegment.clip) nextEntry:nextSegment.clip atTime:currentPlaylistEntryPosition];
     
     // Update the current segment
     self.currentSegment = nextSegment;
@@ -1364,7 +1627,7 @@ NSString *kStatusKey = @"status";
 
         FRAMEWORK_LOG(@"Clip change: Start playback for url: %@\n", currentSegment.clip.clipURI);
     }
-    
+
     // We need to pause or delete the previous player
     // and set the flags appropriately
     if (currentlyPlaying)
@@ -1452,11 +1715,19 @@ NSString *kStatusKey = @"status";
                     NSTimeInterval seconds = nextSegment.initialPlaybackTime;
                     if (0 != seconds)
                     {
-                        CMTime targetTime = CMTimeMakeWithSeconds(seconds, NSEC_PER_SEC);
-                        [moviePlayer seekToTime:targetTime];
+                        if (isSeekingAVPlayer)
+                        {
+                            isSeekingAVPlayer = NO;
+                        }
+                        else
+                        {
+                            CMTime targetTime = CMTimeMakeWithSeconds(seconds, NSEC_PER_SEC);
+                            [moviePlayer seekToTime:targetTime];
+                            isSeekingAVPlayer = YES;
+                        }
                     }
 
-                    if (PlayerStatus_Loading == nextSegment.status)
+                    if (PlayerStatus_Loading == nextSegment.status || PlayerStatus_Ready == nextSegment.status)
                     {
                         // The content is loaded but playback start time is still in the future
                         nextSegment.status = PlayerStatus_Ready;
@@ -1506,9 +1777,13 @@ NSString *kStatusKey = @"status";
                 
             case AVPlayerItemStatusReadyToPlay:
                 {
-                    // This can happen when there is a seek within the same player
+                    // This can happen during a seek where the seek finishes after startPlayback is called
                     FRAMEWORK_LOG(@"Status update: AVPlayerItemStatusReadyToPlay");
                     FRAMEWORK_LOG(@"Clip change rebuffering: clip url: %@\n is ready to play", currentSegment.clip.clipURI);
+                    if (isSeekingAVPlayer)
+                    {
+                        isSeekingAVPlayer = NO;
+                    }
                 }
                 break;
                 
@@ -1543,8 +1818,8 @@ NSString *kStatusKey = @"status";
     AVPlayerLayerView *playerLayerView = [avPlayerViews objectAtIndex:currentSegment.viewIndex];
     AVPlayer *moviePlayer = playerLayerView.player;
     CMTime cmCurrTime = moviePlayer.currentTime;
-    NSTimeInterval currTime = (0 != cmCurrTime.timescale) ? (double)cmCurrTime.value / cmCurrTime.timescale : 0;
     BOOL success = NO;
+    currentPlaylistEntryPosition = (0 != cmCurrTime.timescale) ? (double)cmCurrTime.value / cmCurrTime.timescale : 0;
     
     if (PlayerStatus_Playing != currentSegment.status)
     {
@@ -1560,11 +1835,11 @@ NSString *kStatusKey = @"status";
             PlaybackSegment *segment = nil;
             if (nil != currentSegment.error)
             {
-                success = [sequencer getSegmentOnError:&segment withCurrentSegment:currentSegment mediaTime:currTime currentPlaybackRate:rate error:currentSegment.error isNotPlayed:NO isEndOfSequence:NO];
+                success = [sequencer getSegmentOnError:&segment withCurrentSegment:currentSegment mediaTime:currentPlaylistEntryPosition currentPlaybackRate:rate error:currentSegment.error isNotPlayed:NO isEndOfSequence:NO];
             }
             else
             {
-                success = [sequencer getSegmentOnEndOfMedia:&segment withCurrentSegment:currentSegment mediaTime:currTime currentPlaybackRate:rate isNotPlayed:NO isEndOfSequence:NO];
+                success = [sequencer getSegmentOnEndOfMedia:&segment withCurrentSegment:currentSegment mediaTime:currentPlaylistEntryPosition currentPlaybackRate:rate isNotPlayed:NO isEndOfSequence:NO];
             }
             if (!success)
             {
@@ -1614,7 +1889,7 @@ NSString *kStatusKey = @"status";
         {
             FRAMEWORK_LOG(@"Playback ended");
             
-            [self sendPlaylistEntryChangedNotificationForCurrentEntry:currentSegment.clip nextEntry:nil atTime:currTime];
+            [self sendPlaylistEntryChangedNotificationForCurrentEntry:currentSegment.clip nextEntry:nil atTime:currentPlaylistEntryPosition];
             [self reset:moviePlayer];
             isStopped = YES;
         }
@@ -1622,9 +1897,6 @@ NSString *kStatusKey = @"status";
         {
             [self unregisterPlayer:moviePlayer];
             currentSegment.status = PlayerStatus_Stopped;
-            
-            [self sendPlaylistEntryChangedNotificationForCurrentEntry:currentSegment.clip nextEntry:nextSegment.clip atTime:currTime];
-            
             [self playMovie:nextURL];
         }
         
@@ -1951,13 +2223,60 @@ NSString *kStatusKey = @"status";
         NSTimeInterval currPlaybackTime = (0 == cmCurrPlaybackTime.timescale) ? 0 : (double)cmCurrPlaybackTime.value / cmCurrPlaybackTime.timescale;
         
         // Get seekbar time from the sequencer
-        PlaybackPolicy *playbackPolicy = nil;
+        NSString *playbackPolicy = nil;
         MediaTime *currentMediaTime = [[MediaTime alloc] init];
         currentMediaTime.currentPlaybackPosition = currPlaybackTime;
         currentMediaTime.clipBeginMediaTime = currentSegment.clip.mediaTime.clipBeginMediaTime;
         currentMediaTime.clipEndMediaTime = currentSegment.clip.mediaTime.clipEndMediaTime;
         BOOL segmentEnded = NO;
-        if (![sequencer getSeekbarTime:&seekbarTime andPlaybackPolicy:&playbackPolicy withMediaTime:currentMediaTime playbackRate:rate currentSegment:self.currentSegment playbackRangeExceeded:&segmentEnded])
+        
+        [self updateLiveInfo];
+        if (!hasStartedAfterStop && !(currentSegment.clip.isAdvertisement && currentSegment.clip.linearTime.duration == 0))
+        {
+            hasStarted = YES;
+            hasStartedAfterStop = YES;
+            if (0 != initialPlaybackPosition)
+            {
+                currentMediaTime.currentPlaybackPosition = initialPlaybackPosition;
+            }
+            if (0 != currentMediaTime.currentPlaybackPosition)
+            {
+                [self seekToTime:currentMediaTime.currentPlaybackPosition];
+            }
+        }
+        if (isLive && !(currentSegment.clip.isAdvertisement && currentSegment.clip.linearTime.duration == 0))
+        {
+            // The main content is live, we need to call again with live parameters
+            [seekbarTime release]; 
+            if (![sequencer getSeekbarTime:&seekbarTime andPlaybackPolicy:&playbackPolicy withMediaTime:currentMediaTime playbackRate:rate currentSegment:self.currentSegment playbackRangeExceeded:&segmentEnded leftDvrEdge:leftDvrEdge livePosition:livePosition liveEnded:NO])
+            {
+                if ([[sequencer.lastError.userInfo valueForKey:NSLocalizedFailureReasonErrorKey] rangeOfString:@"taken over by left DVR edge"].location != NSNotFound)
+                {
+                    // left DVR edge take over the current position
+                    // In this case the playback position will be automatically snapped to the left edge by AVPlayer
+                    // We need to notify the app to start playback if it is paused. And we need to call mediaToSeekbarTime
+                    // again to get the correct seek bar range.
+                    self.lastError = sequencer.lastError;
+                    [self sendErrorNotification];
+                    currentMediaTime.currentPlaybackPosition = leftDvrEdge - (currentSegment.clip.linearTime.startTime - currentSegment.clip.mediaTime.clipBeginMediaTime);
+                    if (![sequencer getSeekbarTime:&seekbarTime andPlaybackPolicy:&playbackPolicy withMediaTime:currentMediaTime playbackRate:rate currentSegment:self.currentSegment playbackRangeExceeded:&segmentEnded leftDvrEdge:leftDvrEdge livePosition:livePosition liveEnded:NO])
+                    {
+                        self.lastError = sequencer.lastError;
+                        [self sendErrorNotification];
+                        [currentMediaTime release];
+                        return;                        
+                    }
+                }
+                else
+                {
+                    self.lastError = sequencer.lastError;
+                    [self sendErrorNotification];
+                    [currentMediaTime release];
+                    return;
+                }
+            }
+        }
+        else if (![sequencer getSeekbarTime:&seekbarTime andPlaybackPolicy:&playbackPolicy withMediaTime:currentMediaTime playbackRate:rate currentSegment:self.currentSegment playbackRangeExceeded:&segmentEnded])
         {
             self.lastError = sequencer.lastError;
             [self sendErrorNotification];
@@ -1994,7 +2313,7 @@ NSString *kStatusKey = @"status";
                 [self sendErrorNotification];
             }
         }
-        else if ((currentSegment.clip.mediaTime.clipEndMediaTime - currPlaybackTime < BUFFERING_COMPLETE_BEFORE_EOS_SEC) &&
+        else if ((currentSegment.clip.mediaTime.clipEndMediaTime - currentMediaTime.currentPlaybackPosition < BUFFERING_COMPLETE_BEFORE_EOS_SEC) &&
                  (nil == nextSegment))
         {
             // Should start to pre-load the next content
@@ -2002,7 +2321,7 @@ NSString *kStatusKey = @"status";
         }
         else
         {
-            // TODO: enforce playback policy
+            // the framework won't enforce playback policy
         }
         
         [currentMediaTime release];
@@ -2021,7 +2340,7 @@ NSString *kStatusKey = @"status";
 {
     if (nil != sequencer && nil != sequencer.scheduler)
     {
-        if (sequencer.scheduler.isReady)
+        if (sequencer.isReady)
         {
             [self sendReadyNotification];
         }

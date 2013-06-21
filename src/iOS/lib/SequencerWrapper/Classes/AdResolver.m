@@ -271,15 +271,33 @@ NSString * const ManifestDownloadedArgsUserInfoKey = @"ManifestDownloadedArgs";
 //
 - (BOOL) getElementList:(NSArray **)elementList withPath:(NSArray *)xmlPath;
 {
-    BOOL success = YES;
+    BOOL success = NO;
     
-    /// TODO: to be implemented.
-    
+    NSMutableDictionary *userInfo = [[NSMutableDictionary alloc] init];
+    [userInfo setObject:@"PLAYER_SEQUENCER:NotImplementedException" forKey:NSLocalizedDescriptionKey];
+    [userInfo setObject:@"This method is not implemented yet" forKey:NSLocalizedFailureReasonErrorKey];
+    self.lastError = [NSError errorWithDomain:@"PLAYER_SEQUENCER" code:0 userInfo:userInfo];
+    [userInfo release];
+
     return success;
 }
 
 #pragma mark -
 #pragma mark Properties:
+
+- (BOOL) isReady
+{
+    NSString *result = nil;
+    NSString *function = nil;
+    
+    function = [[[NSString alloc] initWithFormat:@"PLAYER_SEQUENCER.theAdResolverEntryPool.testProbe_toJSON()"] autorelease];
+    SEQUENCER_LOG(@"JavaScript call: %s", [function cStringUsingEncoding:NSUTF8StringEncoding]);
+    result = [webView stringByEvaluatingJavaScriptFromString:function];
+    
+    SEQUENCER_LOG(@"JavaScript result is %@", result);
+    
+    return (0 < [result length]);
+}
 
 #pragma mark -
 #pragma mark Destructor:

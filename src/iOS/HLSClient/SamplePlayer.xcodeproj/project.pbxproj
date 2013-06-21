@@ -10,10 +10,10 @@
 		324FD2EA15FA924300C2B5A7 /* AdResolver.js in Resources */ = {isa = PBXBuildFile; fileRef = 324FD2E915FA924300C2B5A7 /* AdResolver.js */; };
 		324FD2EC15FA925500C2B5A7 /* Scheduler.js in Resources */ = {isa = PBXBuildFile; fileRef = 324FD2EB15FA925500C2B5A7 /* Scheduler.js */; };
 		324FD2F015FA928E00C2B5A7 /* Sequencer.js in Resources */ = {isa = PBXBuildFile; fileRef = 324FD2EF15FA928E00C2B5A7 /* Sequencer.js */; };
-		32673F11166D6F0A00DAD761 /* SequencerPlugin.js in Resources */ = {isa = PBXBuildFile; fileRef = 32673F10166D6F0A00DAD761 /* SequencerPlugin.js */; };
 		3282B2A415EDF35200C68E0A /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3282B2A315EDF35200C68E0A /* AVFoundation.framework */; };
 		3282B2A615EDF36B00C68E0A /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3282B2A515EDF36B00C68E0A /* CoreMedia.framework */; };
 		328631831677CB0A00FDB443 /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 328631821677CB0A00FDB443 /* Default-568h@2x.png */; };
+		32FB2AE91742F2B1000A5EB8 /* SequencerPlugin.js in Resources */ = {isa = PBXBuildFile; fileRef = 32FB2AE81742F2B1000A5EB8 /* SequencerPlugin.js */; };
 		32FE0BCB16155D990016300E /* libSequencerAVPlayerFramework.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 32FE0B97161520CC0016300E /* libSequencerAVPlayerFramework.a */; };
 		8E2915F113BC3935008EE5BE /* MainWindow_iPhone.xib in Resources */ = {isa = PBXBuildFile; fileRef = 2860E327111B887F00E27156 /* MainWindow_iPhone.xib */; };
 		8E2915F213BC3935008EE5BE /* MainWindow_iPad.xib in Resources */ = {isa = PBXBuildFile; fileRef = 2860E32D111B888700E27156 /* MainWindow_iPad.xib */; };
@@ -86,11 +86,11 @@
 		324FD2E915FA924300C2B5A7 /* AdResolver.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = AdResolver.js; path = ../../Core/AdResolver/AdResolver.js; sourceTree = "<group>"; };
 		324FD2EB15FA925500C2B5A7 /* Scheduler.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = Scheduler.js; path = ../../Core/Scheduler/Scheduler.js; sourceTree = "<group>"; };
 		324FD2EF15FA928E00C2B5A7 /* Sequencer.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = Sequencer.js; path = ../../Core/Sequencer/Sequencer.js; sourceTree = "<group>"; };
-		32673F10166D6F0A00DAD761 /* SequencerPlugin.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = SequencerPlugin.js; sourceTree = "<group>"; };
 		3282B2A315EDF35200C68E0A /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		3282B2A515EDF36B00C68E0A /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		328631821677CB0A00FDB443 /* Default-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-568h@2x.png"; sourceTree = "<group>"; };
 		32CA4F630368D1EE00C91783 /* SamplePlayer_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SamplePlayer_Prefix.pch; sourceTree = "<group>"; };
+		32FB2AE81742F2B1000A5EB8 /* SequencerPlugin.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = SequencerPlugin.js; path = ../../Core/Sequencer/SequencerPlugin.js; sourceTree = "<group>"; };
 		32FE0B8B161520CC0016300E /* SequencerAVPlayerFramework.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = SequencerAVPlayerFramework.xcodeproj; path = ../lib/SequencerAVPlayerFramework/SequencerAVPlayerFramework.xcodeproj; sourceTree = "<group>"; };
 		32FE0BC916155D8E0016300E /* libSequencerWrapper.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libSequencerWrapper.a; path = "../../../../iOSRelease/product/SequencerWrapper/Debug-iphoneos/libSequencerWrapper.a"; sourceTree = "<group>"; };
 		8D1107310486CEB800E47090 /* SamplePlayer-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "SamplePlayer-Info.plist"; plistStructureDefinitionIdentifier = "com.apple.xcode.plist.structure-definition.iphone.info-plist"; sourceTree = "<group>"; };
@@ -182,8 +182,8 @@
 		29B97314FDCFA39411CA2CEA /* CustomTemplate */ = {
 			isa = PBXGroup;
 			children = (
+				32FB2AE81742F2B1000A5EB8 /* SequencerPlugin.js */,
 				328631821677CB0A00FDB443 /* Default-568h@2x.png */,
-				32673F10166D6F0A00DAD761 /* SequencerPlugin.js */,
 				32FE0BC916155D8E0016300E /* libSequencerWrapper.a */,
 				324FD2EF15FA928E00C2B5A7 /* Sequencer.js */,
 				324FD2EB15FA925500C2B5A7 /* Scheduler.js */,
@@ -320,7 +320,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				32673F11166D6F0A00DAD761 /* SequencerPlugin.js in Resources */,
+				32FB2AE91742F2B1000A5EB8 /* SequencerPlugin.js in Resources */,
 				324FD2F015FA928E00C2B5A7 /* Sequencer.js in Resources */,
 				324FD2EC15FA925500C2B5A7 /* Scheduler.js in Resources */,
 				324FD2EA15FA924300C2B5A7 /* AdResolver.js in Resources */,

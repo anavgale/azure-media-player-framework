@@ -45,6 +45,7 @@
 @property(nonatomic, retain) NSError *lastError;
 @property(nonatomic, readonly) VASTParser *vastParser;
 @property(nonatomic, readonly) VMAPParser *vmapParser;
+@property(nonatomic, readonly) BOOL isReady;
 
 - (BOOL) downloadManifestAsyncWithURL:(NSURL *)aUrl;
 - (BOOL) downloadManifest:(NSString **)manifest withURL:(NSURL *)aUrl;

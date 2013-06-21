@@ -17,7 +17,6 @@
 
 #import "MediaTime.h"
 #import "LinearTime.h"
-#import "PlaybackPolicy.h"
 
 typedef enum
 {
@@ -38,7 +37,7 @@ typedef enum
     MediaTime *mediaTime;
     BOOL isAdvertisement;
     BOOL deleteAfterPlayed;
-    PlaybackPolicy *playbackPolicy;
+    NSString *playbackPolicy;
 }
 
 @property(nonatomic, assign) PlaylistEntryType type;
@@ -49,6 +48,6 @@ typedef enum
 @property(nonatomic, retain) MediaTime *mediaTime;
 @property(nonatomic, assign) BOOL isAdvertisement;
 @property(nonatomic, assign) BOOL deleteAfterPlayed;
-@property(nonatomic, retain) PlaybackPolicy *playbackPolicy;
+@property(nonatomic, retain) NSString *playbackPolicy;
 
 @end

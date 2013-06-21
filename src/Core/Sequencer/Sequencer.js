@@ -532,7 +532,7 @@ PLAYER_SEQUENCER.createDefaultSequencerPlugin = function (basePlugin) {
     };
 
     basePlugin.testProbe = function ( params ) {
-        // TODO: add testProbe functionallity based on 'params'
+        // we can add testProbe functionallity based on 'params' here
         return "default sequencer";
     };
 };

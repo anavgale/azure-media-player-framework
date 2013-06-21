@@ -20,8 +20,8 @@
 #import "Trace.h"
 
 // Define constant like: NSString * const NotImplementedException = @"NotImplementedException";
-NSString * const ErrorDomain = @"PLAYER_SEQUENCER";
-NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
+NSString * const SequencerErrorDomain = @"PLAYER_SEQUENCER";
+NSString * const SequencerUnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
 
 @implementation Sequencer
 
@@ -40,9 +40,9 @@ NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
     {
         // Empty return from the JavaScript call, which means unexpected error happened.
         NSMutableDictionary *userInfo = [[NSMutableDictionary alloc] init];
-        [userInfo setObject:UnexpectedError forKey:NSLocalizedDescriptionKey];
+        [userInfo setObject:SequencerUnexpectedError forKey:NSLocalizedDescriptionKey];
         [userInfo setObject:@"Unexpected JavaScript error happened" forKey:NSLocalizedFailureReasonErrorKey];
-        error = [NSError errorWithDomain:ErrorDomain code:0 userInfo:userInfo];
+        error = [NSError errorWithDomain:SequencerErrorDomain code:0 userInfo:userInfo];
         [userInfo release];
     }
     else if ([jsonResult hasPrefix:@"{\"EXCEPTION\":"])
@@ -68,7 +68,7 @@ NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
             NSMutableDictionary *userInfo = [[NSMutableDictionary alloc] init];
             [userInfo setObject:nName forKey:NSLocalizedDescriptionKey];
             [userInfo setObject:nMessage forKey:NSLocalizedFailureReasonErrorKey];
-            error = [NSError errorWithDomain:ErrorDomain code:0 userInfo:userInfo];
+            error = [NSError errorWithDomain:SequencerErrorDomain code:0 userInfo:userInfo];
             [userInfo release];
         } while (NO);
     }        
@@ -107,7 +107,7 @@ NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
     NSNumber *nClipBeginMediaTime = [nClip objectForKey:@"clipBeginMediaTime"];
     NSNumber *nClipEndMediaTime = [nClip objectForKey:@"clipEndMediaTime"];
     NSString *nIsAdvertisement = [nClip objectForKey:@"isAdvertisement"];
-    NSDictionary *nPlaybackPolicy = [nClip objectForKey:@"playbackPolicyObj"];
+    NSString *nPlaybackPolicy = [nClip objectForKey:@"playbackPolicyObj"];
     NSString *nDeleteAfterPlay = [nClip objectForKey:@"deleteAfterPlayed"];
     NSNumber *nId = [nClip objectForKey:@"id"];
     NSNumber *nIdSplitFrom = [nClip objectForKey:@"idSplitFrom"];
@@ -129,6 +129,7 @@ NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
     clip.deleteAfterPlayed = [nDeleteAfterPlay boolValue];
     clip.entryId = [nId intValue];
     clip.originalId = [nIdSplitFrom intValue];
+    clip.playbackPolicy = nPlaybackPolicy;
     
     if ([nClipType isEqualToString:@"Media"] || [nClipType isEqualToString:@"ProgramContent"])
     {
@@ -218,7 +219,7 @@ NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
 //
 // Returns: YES for success and NO for failure
 //
-- (BOOL) getSeekbarTime:(SeekbarTime **)seekTime andPlaybackPolicy:(PlaybackPolicy **)policy withMediaTime:(MediaTime *)aMediaTime playbackRate:(double)aRate currentSegment:(PlaybackSegment *)aSegment playbackRangeExceeded:(BOOL *)rangeExceeded
+- (BOOL) getSeekbarTime:(SeekbarTime **)seekTime andPlaybackPolicy:(NSString **)policy withMediaTime:(MediaTime *)aMediaTime playbackRate:(double)aRate currentSegment:(PlaybackSegment *)aSegment playbackRangeExceeded:(BOOL *)rangeExceeded
 {
     assert(nil != rangeExceeded);
     *rangeExceeded = NO;
@@ -263,7 +264,7 @@ NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
         NSNumber *nCurrentSeekbarPosition = [json_out objectForKey:@"currentSeekbarPosition"];
         NSNumber *nMinSeekbarPosition = [json_out objectForKey:@"minSeekbarPosition"];
         NSNumber *nMaxSeekbarPosition = [json_out objectForKey:@"maxSeekbarPosition"];
-        NSDictionary *nPlaybackPolicy = [json_out objectForKey:@"playbackPolicy"];
+        NSString *nPlaybackPolicy = [json_out objectForKey:@"playbackPolicy"];
         NSString *nPlaybackRangeExceeded = [json_out objectForKey:@"playbackRangeExceeded"];
         
         (*seekTime) = [[SeekbarTime alloc] init];
@@ -271,6 +272,113 @@ NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
         (*seekTime).minSeekbarPosition = [nMinSeekbarPosition floatValue];
         (*seekTime).maxSeekbarPosition = [nMaxSeekbarPosition floatValue];
         *rangeExceeded = [nPlaybackRangeExceeded boolValue];
+        *policy = nPlaybackPolicy;
+        
+        // Update the current segment boundary if the clip has changed
+        if (isClipChanged)
+        {
+            // We need to update the current segment boundary
+            function = [[[NSString alloc] initWithFormat:@"PLAYER_SEQUENCER.playbackSegmentPool.getPlaybackSegment(%d).clip.clipBeginMediaTime",
+                         aSegment.segmentId] autorelease];
+            result = [self callJavaScriptWithString:function];
+            if (nil == result)
+            {
+                break;
+            }
+            aSegment.clip.mediaTime.clipBeginMediaTime = [result floatValue];
+            
+            function = [[[NSString alloc] initWithFormat:@"PLAYER_SEQUENCER.playbackSegmentPool.getPlaybackSegment(%d).clip.clipEndMediaTime",
+                         aSegment.segmentId] autorelease];
+            result = [self callJavaScriptWithString:function];
+            if (nil == result)
+            {
+                break;
+            }
+            aSegment.clip.mediaTime.clipEndMediaTime = [result floatValue];
+        }
+        
+        success = YES;
+    } while (NO);
+    
+    return success;
+}
+
+//
+// get seekbar time from media time
+//
+// Arguments:
+// [seekTime]: the output seekbar time
+// [policy]: the output ad policy object
+// [aMediaTime]: the current playback time in media time
+// [aRate]: the current playback rate
+// [aSegment]: the current playback segment
+// [rangeExceeded]: output boolean indicating if the playback range has been exceeded.
+// [leftDvrEdge]: the left edge of the DVR window in media time
+// [livePosition]: the live position in media time
+// [liveEnded]: YES if the live presentation ended
+//
+// Returns: YES for success and NO for failure
+//
+- (BOOL) getSeekbarTime:(SeekbarTime **)seekTime andPlaybackPolicy:(NSString **)policy withMediaTime:(MediaTime *)aMediaTime playbackRate:(double)aRate currentSegment:(PlaybackSegment *)aSegment playbackRangeExceeded:(BOOL *)rangeExceeded leftDvrEdge:(NSTimeInterval)leftDvrEdge livePosition:(NSTimeInterval)livePosition liveEnded:(BOOL)liveEnded
+{
+    assert(nil != rangeExceeded);
+    *rangeExceeded = NO;
+    BOOL isClipChanged = NO;
+    BOOL success = NO;
+    
+    do {
+        NSString *result = nil;
+        
+        // Check if the clip has changed
+        NSString *function = [[[NSString alloc] initWithFormat:@"PLAYER_SEQUENCER.playbackSegmentPool.getPlaybackSegment(%d).isClipChanged",
+                               aSegment.segmentId] autorelease];
+        result = [self callJavaScriptWithString:function];
+        if (nil == result)
+        {
+            break;
+        }
+        isClipChanged = [result isEqualToString:@"true"];
+        
+        function = [[[NSString alloc] initWithFormat:@"PLAYER_SEQUENCER.sequencerPluginChain.runJSON("
+                     "\"{\\\"func\\\": \\\"mediaToSeekbarTime\\\", "
+                     "\\\"params\\\": "
+                     "{ \\\"currentSegmentId\\\": %d, "
+                     "\\\"playbackRate\\\": %f, "
+                     "\\\"currentPlaybackPosition\\\": %f, "
+                     "\\\"clipBeginMediaTime\\\": %f, "
+                     "\\\"clipEndMediaTime\\\": %f, "
+                     "\\\"leftDvrEdge\\\": %f, "
+                     "\\\"livePosition\\\": %f, "
+                     "\\\"liveEnded\\\": %@ } }\")",
+                     aSegment.segmentId,
+                     aRate,
+                     aMediaTime.currentPlaybackPosition,
+                     aMediaTime.clipBeginMediaTime,
+                     aMediaTime.clipEndMediaTime,
+                     leftDvrEdge,
+                     livePosition,
+                     liveEnded ? @"true" : @"false"] autorelease];
+        result = [self callJavaScriptWithString:function];
+        if (nil == result)
+        {
+            break;
+        }
+        
+        NSData* data = [result dataUsingEncoding:[NSString defaultCStringEncoding]];
+        NSError* error = nil;
+        NSDictionary* json_out = [NSJSONSerialization JSONObjectWithData:data options:kNilOptions error:&error];
+        NSNumber *nCurrentSeekbarPosition = [json_out objectForKey:@"currentSeekbarPosition"];
+        NSNumber *nMinSeekbarPosition = [json_out objectForKey:@"minSeekbarPosition"];
+        NSNumber *nMaxSeekbarPosition = [json_out objectForKey:@"maxSeekbarPosition"];
+        NSString *nPlaybackPolicy = [json_out objectForKey:@"playbackPolicy"];
+        NSString *nPlaybackRangeExceeded = [json_out objectForKey:@"playbackRangeExceeded"];
+        
+        (*seekTime) = [[SeekbarTime alloc] init];
+        (*seekTime).currentSeekbarPosition = [nCurrentSeekbarPosition floatValue];
+        (*seekTime).minSeekbarPosition = [nMinSeekbarPosition floatValue];
+        (*seekTime).maxSeekbarPosition = [nMaxSeekbarPosition floatValue];
+        *rangeExceeded = [nPlaybackRangeExceeded boolValue];
+        *policy = nPlaybackPolicy;
         
         // Update the current segment boundary if the clip has changed
         if (isClipChanged)
@@ -351,6 +459,40 @@ NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
                           "\\\"params\\\": { \\\"linearSeekPosition\\\": %f } }\")",
                           linearSeekPosition] autorelease];
     result = [self callJavaScriptWithString:function];    
+    if (nil != result && ![result isEqualToString:@"null"])
+    {
+        *seekSegment = [self parseJSONPlaybackSegment:result];
+    }
+    
+    return (nil != result);
+}
+
+//
+// get segment after a seek in the linear position
+//
+// Arguments:
+// [seekSegment]: the output playback segment
+// [linearSeekPosition]: the linear position to seek to
+// [leftDvrEdge]: the left edge of the DVR window in media time
+// [livePosition]: the live position in media time
+//
+// Returns: YES for success and NO for failure
+//
+- (BOOL) getSegmentAfterSeek:(PlaybackSegment **)seekSegment withLinearPosition:(NSTimeInterval)linearSeekPosition leftDvrEdge:(NSTimeInterval)leftDvrEdge livePosition:(NSTimeInterval)livePosition
+{
+    NSString *result = nil;
+    *seekSegment = nil;
+    
+    NSString *function = [[[NSString alloc] initWithFormat:@"PLAYER_SEQUENCER.sequencerPluginChain.runJSON("
+                           "\"{\\\"func\\\": \\\"seekFromLinearPosition\\\", "
+                           "\\\"params\\\": "
+                           "{ \\\"linearSeekPosition\\\": %f, "
+                           "{ \\\"leftDvrEdge\\\": %f, "
+                           "\\\"livePosition\\\": %f } }\")",
+                           linearSeekPosition,
+                           leftDvrEdge,
+                           livePosition] autorelease];
+    result = [self callJavaScriptWithString:function];
     if (nil != result && ![result isEqualToString:@"null"])
     {
         *seekSegment = [self parseJSONPlaybackSegment:result];
@@ -512,6 +654,32 @@ NSString * const UnexpectedError = @"PLAYER_SEQUENCER:UnexpectedError";
 
 #pragma mark -
 #pragma mark Properties:
+
+- (BOOL) isReady
+{
+    NSString *result = nil;
+    NSString *function = nil;
+    
+    function = [[[NSString alloc] initWithFormat:@"PLAYER_SEQUENCER.playbackSegmentPool.testProbe_toJSON()"] autorelease];
+    SEQUENCER_LOG(@"JavaScript call: %s", [function cStringUsingEncoding:NSUTF8StringEncoding]);
+    result = [webView stringByEvaluatingJavaScriptFromString:function];
+    
+    SEQUENCER_LOG(@"JavaScript result is %@", result);
+    
+    if (0 < [result length])
+    {
+        function = [[[NSString alloc] initWithFormat:@"PLAYER_SEQUENCER.sequencerPluginChain.runJSON("
+                     "\"{\\\"func\\\": \\\"mediaToSeekbarTime\\\", "
+                     "\\\"params\\\": "
+                     "{ \\\"checkLoad\\\": true } }\")"] autorelease];
+        SEQUENCER_LOG(@"JavaScript call: %s", [function cStringUsingEncoding:NSUTF8StringEncoding]);
+        result = [webView stringByEvaluatingJavaScriptFromString:function];
+        
+        SEQUENCER_LOG(@"JavaScript result is %@", result);
+    }
+    
+    return ([result isEqualToString:@"\"Plugin loaded successfully\""] && scheduler.isReady && adResolver.isReady);
+}
 
 #pragma mark -
 #pragma mark Destructor:

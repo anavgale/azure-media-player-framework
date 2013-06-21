@@ -18,7 +18,7 @@
 
 typedef enum
 {
-    VASTData,
+    VASTAdData,
     CustomAdData,
     AdTagURI
 } VMAPAdSourceType;
